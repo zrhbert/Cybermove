@@ -142,6 +142,11 @@ public struct Camera: Equatable, Codable, Sendable {
         roll = Self.wrapped(roll + degrees)
     }
 
+    /// Change the perspective by `degrees` of field of view, within its range.
+    public mutating func adjustFieldOfView(by degrees: Double) {
+        fieldOfView = min(max(fieldOfView + degrees, Self.fieldOfViewRange.lowerBound), Self.fieldOfViewRange.upperBound)
+    }
+
     public mutating func scaleZoom(by factor: Double) {
         zoom = min(max(zoom * factor, Self.zoomRange.lowerBound), Self.zoomRange.upperBound)
     }

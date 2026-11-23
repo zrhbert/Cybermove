@@ -1,6 +1,7 @@
 import CybermoveCore
 import Foundation
 import Observation
+import Synchronization
 
 /// Where the MIDI bytes come from.
 public enum SourceChoice: Hashable, Sendable {
@@ -32,9 +33,11 @@ public enum SourceChoice: Hashable, Sendable {
 
 /// Connects the engine to a source and holds the user's choices.
 ///
-/// The engine is sampled by the views at a fixed rate, so this class only
-/// publishes what changes rarely: the source, whether it is running, and the
-/// display options. The choices are stored in the user defaults.
+/// The views redraw only when something changed: the engine reports arriving
+/// data, and the controller then publishes a new `snapshot`, at most
+/// `refreshRate` times a second. The rest (source, mode, display options,
+/// whether data is flowing) is published when it changes. The choices are
+/// stored in the user defaults.
 @MainActor
 @Observable
 public final class MonitorController {
@@ -61,13 +64,25 @@ public final class MonitorController {
         didSet { engine.setChannels(channels) }
     }
 
+    /// The latest state of the signals; replaced when data arrives.
+    public private(set) var snapshot: MonitorSnapshot
+    /// True from the arrival of data until a second without any.
+    public private(set) var isReceiving = false
+
     public private(set) var isRunning = false
     public private(set) var errorMessage: String?
     public private(set) var midiSources: [CoreMIDIEndpoint] = []
 
     public let engine: MonitorEngine
     private var task: Task<Void, Never>?
+    private var silenceTask: Task<Void, Never>?
     private let defaults: UserDefaults
+    private let refreshPending = Mutex(false)
+
+    /// Most snapshots published per second while data streams in.
+    private nonisolated static let refreshRate = 30.0
+    /// How long without data until the status changes from "receiving".
+    private nonisolated static let silence = Duration.seconds(1.05)
 
     private enum Key {
         static let fifoPath = "fifoPath"
@@ -79,11 +94,39 @@ public final class MonitorController {
     public init(defaults: UserDefaults = .standard, engine: MonitorEngine = MonitorEngine()) {
         self.defaults = defaults
         self.engine = engine
+        snapshot = engine.snapshot()
         fifoPath = defaults.string(forKey: Key.fifoPath) ?? "/tmp/cybermove.fifo"
         source = defaults.string(forKey: Key.source).flatMap(SourceChoice.init(storageValue:)) ?? .fifo
         mode = GraphicsMode(rawValue: defaults.integer(forKey: Key.mode)) ?? .quadro
         options = DisplayOptions(storedJSON: defaults.data(forKey: Key.options))
         refreshMIDISources()
+        // Called from the reader thread: note that a refresh is due, and let
+        // the main thread do it once per frame however many chunks arrived.
+        engine.setChangeHandler { [weak self] in
+            guard let self, self.refreshPending.withLock({ pending in
+                defer { pending = true }
+                return !pending
+            }) else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1 / Self.refreshRate) {
+                MainActor.assumeIsolated { self.refresh() }
+            }
+        }
+    }
+
+    /// Publish the engine's current state.
+    private func refresh() {
+        refreshPending.withLock { $0 = false }
+        let latest = engine.snapshot()
+        snapshot = latest
+        let receiving = latest.isReceiving(within: 1)
+        if receiving != isReceiving { isReceiving = receiving }
+        silenceTask?.cancel()
+        guard receiving else { return }
+        // Nothing arrives to trigger the next update, so ask for one.
+        silenceTask = Task {
+            try? await Task.sleep(for: Self.silence)
+            if !Task.isCancelled { self.refresh() }
+        }
     }
 
     /// The MIDI inputs to offer. A stored choice that is currently not

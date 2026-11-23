@@ -62,8 +62,19 @@ The source, FIFO path and graphics mode are remembered between runs.
 ### Display options
 
 The cubes are drawn by a real 3D camera that looks at the centre of the cube. All cubes
-share the view. **Drag** in the cube area to turn them, **pinch** to zoom, **rotate** with two
-fingers to twist about the line of sight, and **double-click** to return to the default view.
+share the view. In the cube area:
+
+| Gesture | Effect |
+|---|---|
+| drag | turn the cubes |
+| two-finger scroll (or the mouse wheel) | zoom |
+| three fingers up or down on the trackpad | perspective (field of view) |
+| pinch | zoom |
+| two-finger rotate | roll about the line of sight |
+| double-click | back to the default view |
+
+(Three-finger gestures can be taken by the system: in System Settings > Trackpad, set Mission
+Control and App Expose to four fingers, and do not use three-finger drag.)
 A small X, Y, Z indicator in the first cube shows how the view is turned.
 
 The **Display** button opens the settings.
@@ -140,6 +151,13 @@ The decoder only depends on a byte stream (`MidiByteSource`). The Hatari FIFO an
 CoreMIDI are the two sources so far; CoreMIDI delivers Universal MIDI Packets, which
 `UMP` converts back to classic MIDI bytes. A bidirectional port can later sit beside
 them without touching the decoder.
+
+## Redraw
+
+The window is redrawn only when something changes: when MIDI data arrives (at most 30
+times a second), when a setting or the view changes, and once when a second passes without
+data (the status changes from "receiving" to "waiting for data"). With no data and no input
+the app uses no CPU.
 
 ## Roadmap
 

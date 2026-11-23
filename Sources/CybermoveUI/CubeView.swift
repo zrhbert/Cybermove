@@ -207,18 +207,14 @@ struct AxesView: View {
     }
 }
 
-/// The grid of cubes, laid out like CMO's window. Dragging turns all cubes
-/// together, pinching zooms, rotating twists the view about the line of sight,
-/// and a double click goes back to the default view.
+/// The grid of cubes, laid out like CMO's window. With `onCameraChange` the
+/// cubes can be turned, zoomed and re-lensed with the mouse and trackpad (see
+/// `CameraInteraction`).
 public struct CubeGridView: View {
     let mode: GraphicsMode
     let signals: [SignalState]
     let options: DisplayOptions
     let onCameraChange: ((Camera) -> Void)?
-
-    @State private var dragStart: Camera?
-    @State private var zoomStart: Double?
-    @State private var rollStart: Double?
 
     public init(mode: GraphicsMode, signals: [SignalState], options: DisplayOptions = DisplayOptions(),
                 onCameraChange: ((Camera) -> Void)? = nil) {
@@ -227,9 +223,6 @@ public struct CubeGridView: View {
         self.options = options
         self.onCameraChange = onCameraChange
     }
-
-    /// Degrees of rotation per point of dragging.
-    private static let degreesPerPoint = 0.5
 
     public var body: some View {
         VStack(spacing: 3) {
@@ -245,46 +238,9 @@ public struct CubeGridView: View {
             // In the first cube, below its label.
             if options.showAxes { AxesView(camera: options.camera).padding(.top, 14).padding(.leading, 4) }
         }
-        .contentShape(Rectangle())
-        .gesture(onCameraChange.map(interaction))
-    }
-
-    /// Each gesture changes only its own part of the camera, from where that
-    /// part was when the gesture began, so that dragging and pinching at the
-    /// same time do not undo each other.
-    private func interaction(_ change: @escaping (Camera) -> Void) -> some Gesture {
-        let drag = DragGesture(minimumDistance: 2)
-            .onChanged { value in
-                let start = dragStart ?? options.camera
-                dragStart = start
-                var camera = options.camera
-                (camera.yaw, camera.pitch) = (start.yaw, start.pitch)
-                camera.orbit(dx: value.translation.width * Self.degreesPerPoint,
-                             dy: value.translation.height * Self.degreesPerPoint)
-                change(camera)
-            }
-            .onEnded { _ in dragStart = nil }
-        let magnify = MagnifyGesture()
-            .onChanged { value in
-                let start = zoomStart ?? options.camera.zoom
-                zoomStart = start
-                var camera = options.camera
-                camera.zoom = start
-                camera.scaleZoom(by: value.magnification)
-                change(camera)
-            }
-            .onEnded { _ in zoomStart = nil }
-        let rotate = RotateGesture()
-            .onChanged { value in
-                let start = rollStart ?? options.camera.roll
-                rollStart = start
-                var camera = options.camera
-                camera.roll = start
-                camera.rotateAboutViewAxis(by: -value.rotation.degrees)
-                change(camera)
-            }
-            .onEnded { _ in rollStart = nil }
-        let reset = TapGesture(count: 2).onEnded { change(Camera()) }
-        return reset.exclusively(before: drag.simultaneously(with: magnify).simultaneously(with: rotate))
+        .overlay {
+            // Not when rendering to an image, which cannot draw views from AppKit.
+            if let onCameraChange { CameraInteraction(camera: options.camera, onChange: onCameraChange) }
+        }
     }
 }

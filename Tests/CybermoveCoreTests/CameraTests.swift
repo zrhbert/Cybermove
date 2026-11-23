@@ -128,6 +128,17 @@ import Testing
         #expect(close(camera.project(SIMD3(1, 0, 0))!.x, 2 * one))
     }
 
+    @Test func fieldOfViewAdjustmentStaysInRange() {
+        var camera = Camera(fieldOfView: 30)
+        camera.adjustFieldOfView(by: 15)
+        #expect(camera.fieldOfView == 45)
+        camera.adjustFieldOfView(by: 1000)
+        #expect(camera.fieldOfView == Camera.fieldOfViewRange.upperBound)
+        camera.adjustFieldOfView(by: -1000)
+        #expect(camera.fieldOfView == Camera.fieldOfViewRange.lowerBound)
+        #expect(camera.isOrthographic)
+    }
+
     @Test func zoomIsClamped() {
         var camera = Camera()
         camera.scaleZoom(by: 1000)

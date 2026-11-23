@@ -21,7 +21,7 @@ public struct DisplayOptionsView: View {
                 }
                 .fixedSize()
             }
-            Text("Drag in the cubes to turn them, pinch to zoom, double-click to reset.")
+            Text("In the cubes: drag to turn, two-finger scroll or pinch to zoom, three fingers up or down for perspective, double-click to reset.")
                 .font(.caption).foregroundStyle(.secondary)
             slider("Yaw", value: $options.camera.yaw, range: -180...180, unit: "°")
             slider("Pitch", value: $options.camera.pitch, range: -180...180, unit: "°")

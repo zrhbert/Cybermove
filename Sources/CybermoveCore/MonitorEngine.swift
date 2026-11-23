@@ -36,9 +36,21 @@ public final class MonitorEngine: Sendable {
     }
 
     private let state: Mutex<State>
+    private let changeHandler = Mutex<(@Sendable () -> Void)?>(nil)
 
     public init(config: CybermoveConfig = CybermoveConfig()) {
         state = Mutex(State(decoder: CybermoveDecoder(config: config)))
+    }
+
+    /// Called, on whatever thread caused it, after the state changed: bytes
+    /// arrived, or the engine was reset or reconfigured. The handler should be
+    /// quick and must not call back into the engine under a lock.
+    public func setChangeHandler(_ handler: (@Sendable () -> Void)?) {
+        changeHandler.withLock { $0 = handler }
+    }
+
+    private func notifyChange() {
+        changeHandler.withLock { $0 }?()
     }
 
     /// Process a chunk of raw bytes.
@@ -58,6 +70,7 @@ public final class MonitorEngine: Sendable {
                 state.decoder.apply(message)
             }
         }
+        notifyChange()
     }
 
     /// Consume a byte source until it ends or the surrounding task is cancelled.
@@ -88,6 +101,7 @@ public final class MonitorEngine: Sendable {
             state.decoder = CybermoveDecoder(config: CybermoveConfig(channels: channels))
             state.parser = MidiParser()
         }
+        notifyChange()
     }
 
     /// Clear signals, counters and parser state.
@@ -96,5 +110,6 @@ public final class MonitorEngine: Sendable {
             let config = state.decoder.config
             state = State(decoder: CybermoveDecoder(config: config))
         }
+        notifyChange()
     }
 }

@@ -36,12 +36,35 @@ public struct MonitorContent: View {
 }
 
 /// Status line text, e.g. "receiving  26690 bytes  8898 messages".
-func statusText(_ snapshot: MonitorSnapshot, isRunning: Bool, now: Date) -> String {
-    let state = !isRunning ? "stopped" : snapshot.isReceiving(at: now) ? "receiving" : "waiting for data"
+func statusText(_ snapshot: MonitorSnapshot, isRunning: Bool, isReceiving: Bool) -> String {
+    let state = !isRunning ? "stopped" : isReceiving ? "receiving" : "waiting for data"
     return "\(state)   \(snapshot.bytesReceived) bytes   \(snapshot.messagesReceived) messages   \(snapshot.stopCount) stops"
 }
 
-/// The live window: controls on top, the sampled state below.
+/// The signals and the status line. A view of its own so that only this part
+/// is evaluated when data arrives or the display settings change.
+struct MonitorDisplay: View {
+    let controller: MonitorController
+
+    var body: some View {
+        VStack(spacing: 0) {
+            MonitorContent(snapshot: controller.snapshot, mode: controller.mode, system: controller.selectedSystem,
+                           options: controller.options,
+                           onCameraChange: { controller.options.camera = $0 })
+            Divider()
+            HStack {
+                Text(statusText(controller.snapshot, isRunning: controller.isRunning,
+                                isReceiving: controller.isReceiving))
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(6)
+        }
+    }
+}
+
+/// The live window: controls on top, the state below.
 public struct MonitorView: View {
     @Bindable var controller: MonitorController
     @State private var showingDisplayOptions = false
@@ -54,25 +77,9 @@ public struct MonitorView: View {
         VStack(spacing: 0) {
             controls
             Divider()
-            TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { timeline in
-                let snapshot = controller.engine.snapshot()
-                VStack(spacing: 0) {
-                    MonitorContent(snapshot: snapshot, mode: controller.mode, system: controller.selectedSystem,
-                                   options: controller.options,
-                                   onCameraChange: { controller.options.camera = $0 })
-                    Divider()
-                    HStack {
-                        Text(statusText(snapshot, isRunning: controller.isRunning, now: timeline.date))
-                            .font(.system(.caption, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(6)
-                }
-            }
+            MonitorDisplay(controller: controller)
         }
     }
-
     private var controls: some View {
         HStack(spacing: 12) {
             Picker("Source", selection: $controller.source) {
