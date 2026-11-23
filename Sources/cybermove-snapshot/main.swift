@@ -36,6 +36,7 @@ while let option = arguments.first {
     case "--inside": options.insideView = true; continue
     case "--no-depth-cues": options.depthCues = false; continue
     case "--no-axes": options.showAxes = false; continue
+    case "--no-fit": options.camera.fitToView = false; continue
     default: break
     }
     guard let value = arguments.first else { fail("\(option) needs a value") }

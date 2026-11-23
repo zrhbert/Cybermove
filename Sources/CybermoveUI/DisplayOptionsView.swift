@@ -29,6 +29,7 @@ public struct DisplayOptionsView: View {
             slider("Perspective (field of view)", value: $options.camera.fieldOfView,
                    range: Camera.fieldOfViewRange, unit: "°", zeroLabel: "off")
             slider("Zoom", value: $options.camera.zoom, range: Camera.zoomRange, unit: "×", step: 0.05, decimals: 2)
+            Toggle("Keep the whole cube in view", isOn: $options.camera.fitToView)
             Toggle("Inside view (zoom to the middle third)", isOn: $options.insideView)
             Toggle("Mark the inside area with dotted squares", isOn: $options.markInsideArea)
                 .disabled(options.insideView)

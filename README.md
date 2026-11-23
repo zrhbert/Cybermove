@@ -64,7 +64,7 @@ The source, FIFO path and graphics mode are remembered between runs.
 The cubes are drawn by a real 3D camera that looks at the centre of the cube. All cubes
 share the view. **Drag** in the cube area to turn them, **pinch** to zoom, **rotate** with two
 fingers to twist about the line of sight, and **double-click** to return to the default view.
-A small X, Y, Z indicator in the corner shows how the view is turned.
+A small X, Y, Z indicator in the first cube shows how the view is turned.
 
 The **Display** button opens the settings.
 
@@ -72,7 +72,8 @@ The **Display** button opens the settings.
 |---|---|
 | Yaw, Pitch, Roll | full rotation, -180 to 180 degrees each; pitch past 90 shows the cube from below and upside down |
 | Perspective (field of view) | the lens angle: 0 is orthographic with no perspective, 30 is the default, 100 a strong wide angle. The cube keeps its size on screen, only the strength of the perspective changes |
-| Zoom | scales the picture (the cube fits its cell at 1) |
+| Zoom | scales the picture, relative to the fit below |
+| Keep the whole cube in view | on by default: the picture is scaled so that the whole cube, from the current direction, just fills its cell, and the zoom is relative to that. Off: a fixed size that is safe from every direction (a cube seen face-on then fills about 60% of the cell) |
 | Presets | oblique, isometric, front, side, top and wide angle views |
 | Inside view | zoom in on the middle third of the cube, like "Innenraum" |
 | Mark the inside area | in the full view, a dotted square on each face shows what the inside view zooms in on |
@@ -89,7 +90,7 @@ The cube's sides are always drawn 1:1, whatever the shape of the cell. Parts of 
 fall behind the camera (wide angles, inside view) are cut off. The inside view frames the
 middle third of the cube with the same camera, and the cell cuts off what lies outside.
 
-The settings are remembered between runs.
+The settings, including the whole camera (angles, perspective, zoom, fit), are remembered between runs; Reset goes back to the defaults.
 
 ### Trying CoreMIDI without an Atari
 

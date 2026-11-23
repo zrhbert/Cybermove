@@ -60,7 +60,9 @@ public struct CubeView: View {
 
     private func draw(into context: inout GraphicsContext, size: CGSize) {
         let rect = CGRect(origin: .zero, size: size)
-        let camera = options.camera
+        // The inside view looks at the middle third, which the fit would ignore.
+        let camera = options.insideView ? { var c = options.camera; c.fitToView = false; return c.resolved }()
+                                        : options.camera.resolved
         let range = mode.signals(inCube: cube)
         // The inside view frames the middle third of the cube; whatever lies
         // outside is cut off by the cell.
@@ -216,7 +218,9 @@ public struct CubeGridView: View {
     let options: DisplayOptions
     let onCameraChange: ((Camera) -> Void)?
 
-    @State private var gestureStart: Camera?
+    @State private var dragStart: Camera?
+    @State private var zoomStart: Double?
+    @State private var rollStart: Double?
 
     public init(mode: GraphicsMode, signals: [SignalState], options: DisplayOptions = DisplayOptions(),
                 onCameraChange: ((Camera) -> Void)? = nil) {
@@ -239,39 +243,49 @@ public struct CubeGridView: View {
                 }
             }
         }
-        .overlay(alignment: .bottomTrailing) {
-            if options.showAxes { AxesView(camera: options.camera).padding(6) }
+        .overlay(alignment: .topLeading) {
+            // In the first cube, below its label.
+            if options.showAxes { AxesView(camera: options.camera).padding(.top, 14).padding(.leading, 4) }
         }
         .contentShape(Rectangle())
         .gesture(onCameraChange.map(interaction))
     }
 
+    /// Each gesture changes only its own part of the camera, from where that
+    /// part was when the gesture began, so that dragging and pinching at the
+    /// same time do not undo each other.
     private func interaction(_ change: @escaping (Camera) -> Void) -> some Gesture {
         let drag = DragGesture(minimumDistance: 2)
             .onChanged { value in
-                var camera = gestureStart ?? options.camera
-                gestureStart = camera
+                let start = dragStart ?? options.camera
+                dragStart = start
+                var camera = options.camera
+                (camera.yaw, camera.pitch) = (start.yaw, start.pitch)
                 camera.orbit(dx: value.translation.width * Self.degreesPerPoint,
                              dy: value.translation.height * Self.degreesPerPoint)
                 change(camera)
             }
-            .onEnded { _ in gestureStart = nil }
+            .onEnded { _ in dragStart = nil }
         let magnify = MagnifyGesture()
             .onChanged { value in
-                var camera = gestureStart ?? options.camera
-                gestureStart = camera
+                let start = zoomStart ?? options.camera.zoom
+                zoomStart = start
+                var camera = options.camera
+                camera.zoom = start
                 camera.scaleZoom(by: value.magnification)
                 change(camera)
             }
-            .onEnded { _ in gestureStart = nil }
+            .onEnded { _ in zoomStart = nil }
         let rotate = RotateGesture()
             .onChanged { value in
-                var camera = gestureStart ?? options.camera
-                gestureStart = camera
+                let start = rollStart ?? options.camera.roll
+                rollStart = start
+                var camera = options.camera
+                camera.roll = start
                 camera.rotateAboutViewAxis(by: -value.rotation.degrees)
                 change(camera)
             }
-            .onEnded { _ in gestureStart = nil }
+            .onEnded { _ in rollStart = nil }
         let reset = TapGesture(count: 2).onEnded { change(Camera()) }
         return reset.exclusively(before: drag.simultaneously(with: magnify).simultaneously(with: rotate))
     }

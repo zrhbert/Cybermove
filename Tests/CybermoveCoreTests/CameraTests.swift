@@ -202,6 +202,51 @@ import Testing
         }
     }
 
+    @Test func fittedCubeFillsTheViewFromEveryDirectionWithoutLeavingIt() {
+        let rect = CGRect(x: 0, y: 0, width: 150, height: 90)
+        for yaw in stride(from: -180.0, through: 180, by: 30) {
+            for pitch in stride(from: -90.0, through: 90, by: 30) {
+                for fov in [0.0, 12, 30, 75, 100] {
+                    let camera = Camera(yaw: yaw, pitch: pitch, roll: 17, fieldOfView: fov).resolved
+                    var extent = 0.0
+                    for sx in [-1.0, 1] { for sy in [-1.0, 1] { for sz in [-1.0, 1] {
+                        let p = camera.project(SIMD3(sx, sy, sz))!
+                        extent = max(extent, abs(p.x), abs(p.y))
+                        let point = camera.screen(p, in: rect, inset: 0.05)
+                        #expect(rect.insetBy(dx: -0.5, dy: -0.5).contains(point))
+                    } } }
+                    #expect(close(extent, 1, 1e-9), "yaw \(yaw) pitch \(pitch) fov \(fov): extent \(extent)")
+                }
+            }
+        }
+    }
+
+    @Test func zoomIsRelativeToTheFit() {
+        let base = Camera().resolved.project(SIMD3(1, 1, 1))!
+        var camera = Camera()
+        camera.zoom = 0.5
+        let half = camera.resolved.project(SIMD3(1, 1, 1))!
+        #expect(close(half.x, base.x / 2) && close(half.y, base.y / 2))
+    }
+
+    @Test func withoutFitZoomIsAFixedSize() {
+        var camera = Camera(yaw: 0, pitch: 0, fieldOfView: 0)
+        camera.fitToView = false
+        #expect(camera.resolved == camera)
+        // face-on, the cube fills about 58% of the view
+        #expect(close(camera.project(SIMD3(1, 1, 1))!.x, 1 / 3.0.squareRoot()))
+    }
+
+    @Test func everyPresetFitsTheWholeCube() {
+        for (name, preset) in Camera.presets {
+            let camera = preset.resolved
+            for sx in [-1.0, 1] { for sy in [-1.0, 1] { for sz in [-1.0, 1] {
+                let p = camera.project(SIMD3(sx, sy, sz))!
+                #expect(abs(p.x) <= 1 + 1e-9 && abs(p.y) <= 1 + 1e-9, "\(name)")
+            } } }
+        }
+    }
+
     @Test func presetsAreDistinctAndWithinRanges() {
         #expect(Set(Camera.presets.map(\.name)).count == Camera.presets.count)
         for (_, camera) in Camera.presets {

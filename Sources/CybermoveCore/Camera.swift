@@ -31,23 +31,31 @@ public struct ProjectedPoint: Equatable, Sendable {
 /// changes only the strength of the perspective, not the size of the picture.
 /// A field of view below one degree means an orthographic projection with no
 /// perspective at all.
+///
+/// With `fitToView` on, the picture is scaled so that the whole cube, seen
+/// from the current direction, just fills the view, and `zoom` is relative to
+/// that (1 is a snug fit). With it off, `zoom` 1 is a fixed size that keeps
+/// the cube inside the view from every direction, but a cube seen face-on
+/// then fills only about 60% of it.
 public struct Camera: Equatable, Codable, Sendable {
     public var yaw: Double
     public var pitch: Double
     public var roll: Double
     public var fieldOfView: Double
     public var zoom: Double
+    public var fitToView: Bool
 
     public static let fieldOfViewRange: ClosedRange<Double> = 0...100
     public static let zoomRange: ClosedRange<Double> = 0.3...4
 
     public init(yaw: Double = -30, pitch: Double = 20, roll: Double = 0,
-                fieldOfView: Double = 30, zoom: Double = 1) {
+                fieldOfView: Double = 30, zoom: Double = 1, fitToView: Bool = true) {
         self.yaw = yaw
         self.pitch = pitch
         self.roll = roll
         self.fieldOfView = fieldOfView
         self.zoom = zoom
+        self.fitToView = fitToView
     }
 
     /// Missing keys keep their defaults.
@@ -59,6 +67,7 @@ public struct Camera: Equatable, Codable, Sendable {
         roll = try container.decodeIfPresent(Double.self, forKey: .roll) ?? defaults.roll
         fieldOfView = try container.decodeIfPresent(Double.self, forKey: .fieldOfView) ?? defaults.fieldOfView
         zoom = try container.decodeIfPresent(Double.self, forKey: .zoom) ?? defaults.zoom
+        fitToView = try container.decodeIfPresent(Bool.self, forKey: .fitToView) ?? defaults.fitToView
     }
 
     public var isOrthographic: Bool { fieldOfView < 1 }
@@ -74,6 +83,31 @@ public struct Camera: Equatable, Codable, Sendable {
         ("Top", Camera(yaw: 0, pitch: 90, fieldOfView: 0)),
         ("Wide angle", Camera(yaw: -30, pitch: 20, fieldOfView: 75)),
     ]
+
+    // MARK: - Fitting
+
+    /// How much the picture must be scaled for the whole cube to fill the view
+    /// exactly from the current direction (at zoom 1, before `fitToView`).
+    public var fitFactor: Double {
+        var camera = self
+        camera.zoom = 1
+        camera.fitToView = false
+        var extent = 0.0
+        for sx in [-1.0, 1] { for sy in [-1.0, 1] { for sz in [-1.0, 1] {
+            guard let p = camera.project(SIMD3(sx, sy, sz)) else { continue }
+            extent = max(extent, abs(p.x), abs(p.y))
+        } } }
+        return extent > 0 ? 1 / extent : 1
+    }
+
+    /// The camera to draw with: `fitToView` and `zoom` folded into a fixed
+    /// zoom. Call this once per frame, not per point.
+    public var resolved: Camera {
+        var camera = self
+        if fitToView { camera.zoom = zoom * fitFactor }
+        camera.fitToView = false
+        return camera
+    }
 
     // MARK: - Rotation
 

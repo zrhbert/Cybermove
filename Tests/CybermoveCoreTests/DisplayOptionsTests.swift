@@ -20,6 +20,18 @@ import Testing
         #expect(DisplayOptions(storedJSON: options.storedJSON) == options)
     }
 
+    @Test func zoomPerspectiveAndFitAreStoredAndRestoredByReset() throws {
+        var options = DisplayOptions()
+        options.camera.zoom = 0.3
+        options.camera.fieldOfView = 12
+        options.camera.fitToView = false
+        let data = try #require(options.storedJSON)
+        let json = try #require(String(data: data, encoding: .utf8))
+        #expect(json.contains("\"zoom\":0.3") && json.contains("\"fieldOfView\":12") && json.contains("\"fitToView\":false"))
+        #expect(DisplayOptions(storedJSON: options.storedJSON).camera == options.camera)
+        #expect(DisplayOptions().camera.zoom == 1 && DisplayOptions().camera.fieldOfView == 30)
+    }
+
     @Test func settingsFromAnOlderVersionKeepTheirValuesAndGetDefaultsForNewOptions() {
         // Version 0.2 stored the oblique angles, which no longer exist.
         let old = Data(#"{"rotationX":33,"showCrosshairs":true,"markInsideArea":false}"#.utf8)
