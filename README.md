@@ -44,7 +44,7 @@ would need a Developer ID signature and notarization. The icon is drawn by
 `scripts/make_icon.py` and the generated `Resources/AppIcon.icns` is committed.
 
 The window: The left side lists the 32 signals of the
-chosen system. The right side is a grid of cubes laid out like Realtimer's CMO
+chosen system. The right side is a grid of cubes, each drawn as a true cube whatever the shape of its cell, laid out like Realtimer's CMO
 window, in the same four graphics modes: mono (one signal per cube, a line from
 the centre), stereo (pairs joined), quadro and okto (four or eight signals on
 one line). The channel buttons choose which CMI system is shown.
@@ -69,6 +69,7 @@ where it has a counterpart. The defaults are Realtimer's.
 | LR rotation, OU rotation | how far depth shifts a point sideways and up or down (60 and 50 degrees) |
 | Depth effect | Realtimer's "Wirkung": points farther away are drawn smaller (0 for none) |
 | Inside view | zoom in on the middle third of the cube, like "Innenraum" |
+| Mark the inside area | in the full view, a dotted square on each face shows what the inside view zooms in on |
 | Lines between signals | the mono, stereo, quadro and okto lines |
 | Crosshairs | a line along each axis through every point ("Fadenkreuz") |
 | Volume bars | horizontal bars along the bottom of each cube |

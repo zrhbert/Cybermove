@@ -19,6 +19,19 @@ import Testing
         #expect(DisplayOptions(storedJSON: options.storedJSON) == options)
     }
 
+    @Test func settingsFromAnOlderVersionKeepTheirValuesAndGetDefaultsForNewOptions() {
+        let old = Data(#"{"rotationX":33,"showCrosshairs":true}"#.utf8)
+        let options = DisplayOptions(storedJSON: old)
+        #expect(options.rotationX == 33)
+        #expect(options.showCrosshairs)
+        #expect(options.rotationY == 50)
+        #expect(options.markInsideArea)
+    }
+
+    @Test func insideAreaIsMarkedByDefault() {
+        #expect(DisplayOptions().markInsideArea)
+    }
+
     @Test func damagedStorageFallsBackToDefaults() {
         #expect(DisplayOptions(storedJSON: Data("not json".utf8)) == DisplayOptions())
         #expect(DisplayOptions(storedJSON: nil) == DisplayOptions())

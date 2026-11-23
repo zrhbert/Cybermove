@@ -42,16 +42,45 @@ import Testing
         #expect(front.y > back.y)
     }
 
-    @Test func cubeFillsTheRectMinusInset() {
+    private func cornerBounds(in rect: CGRect, inset: Double = 0.1) -> CGRect {
         let projection = SpaceProjection()
         var points: [CGPoint] = []
         for x in [-1.0, 1.0] { for y in [-1.0, 1.0] { for z in [-1.0, 1.0] {
-            points.append(projection.screen(x: x, y: y, z: z, in: rect, inset: 0.1))
+            points.append(projection.screen(x: x, y: y, z: z, in: rect, inset: inset))
         } } }
-        #expect(abs(points.map(\.x).min()! - 20) < 0.001)
-        #expect(abs(points.map(\.x).max()! - 180) < 0.001)
-        #expect(abs(points.map(\.y).min()! - 10) < 0.001)
-        #expect(abs(points.map(\.y).max()! - 90) < 0.001)
+        let xs = points.map(\.x), ys = points.map(\.y)
+        return CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!)
+    }
+
+    @Test func cubeFitsInsideTheRectAndTouchesTheLimitingSide() {
+        // a wide cell: the height limits, the cube is centred sideways
+        let wide = cornerBounds(in: CGRect(x: 0, y: 0, width: 400, height: 100))
+        #expect(abs(wide.height - 80) < 0.001)
+        #expect(abs(wide.midX - 200) < 0.001 && abs(wide.midY - 50) < 0.001)
+        // a tall cell: the width limits, the cube is centred vertically
+        let tall = cornerBounds(in: CGRect(x: 0, y: 0, width: 100, height: 400))
+        #expect(abs(tall.width - 80) < 0.001)
+        #expect(abs(tall.midX - 50) < 0.001 && abs(tall.midY - 200) < 0.001)
+    }
+
+    @Test func cubeKeepsItsProportionsInAnyCellShape() {
+        let wide = cornerBounds(in: CGRect(x: 0, y: 0, width: 400, height: 100))
+        let tall = cornerBounds(in: CGRect(x: 0, y: 0, width: 100, height: 400))
+        let square = cornerBounds(in: CGRect(x: 0, y: 0, width: 200, height: 200))
+        let ratio = square.width / square.height
+        #expect(abs(wide.width / wide.height - ratio) < 1e-9)
+        #expect(abs(tall.width / tall.height - ratio) < 1e-9)
+    }
+
+    @Test func oneUnitIsTheSameLengthAlongX_YAndZ() {
+        let projection = SpaceProjection()
+        for rect in [CGRect(x: 0, y: 0, width: 400, height: 100), CGRect(x: 0, y: 0, width: 100, height: 400)] {
+            let origin = projection.screen(x: 0, y: 0, z: 0, in: rect)
+            let right = projection.screen(x: 1, y: 0, z: 0, in: rect)
+            let up = projection.screen(x: 0, y: 1, z: 0, in: rect)
+            #expect(abs((right.x - origin.x) - (origin.y - up.y)) < 1e-9)   // equal on screen
+            #expect(abs(right.y - origin.y) < 1e-9 && abs(up.x - origin.x) < 1e-9)
+        }
     }
 
     @Test func rotationAnglesUseRealtimersIntegerShift() {

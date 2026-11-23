@@ -17,6 +17,8 @@ public struct DisplayOptionsView: View {
             slider("OU rotation", value: $options.rotationY, range: DisplayOptions.rotationRange, unit: "°")
             slider("Depth effect", value: $options.perspective, range: DisplayOptions.perspectiveRange, unit: "")
             Toggle("Inside view (zoom to the middle third)", isOn: $options.insideView)
+            Toggle("Mark the inside area with dotted squares", isOn: $options.markInsideArea)
+                .disabled(options.insideView)
 
             Divider()
             Text("Show").font(.headline)

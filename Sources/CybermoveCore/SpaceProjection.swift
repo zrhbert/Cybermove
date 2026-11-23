@@ -88,17 +88,20 @@ public struct SpaceProjection: Sendable, Equatable {
         return (lower, upper)
     }
 
-    /// Position in `rect` (y down, as in UI coordinates), with the cube filling
-    /// the rect minus `inset`, a fraction of its size on each side.
+    /// Position in `rect` (y down, as in UI coordinates). The cube keeps its
+    /// proportions whatever the shape of `rect`: one scale for both directions,
+    /// chosen so that the whole cube fits inside `rect` minus `inset` (a
+    /// fraction of its size on each side), and centred in it.
     public func screen(x: Double, y: Double, z: Double, in rect: CGRect, inset: Double = 0.08) -> CGPoint {
         let point = plane(x: x, y: y, z: z)
         let bounds = cubeBounds
-        let width = rect.width * (1 - 2 * inset)
-        let height = rect.height * (1 - 2 * inset)
-        let u = (point.x - bounds.min.x) / (bounds.max.x - bounds.min.x)
-        let v = (bounds.max.y - point.y) / (bounds.max.y - bounds.min.y)
-        return CGPoint(x: rect.minX + rect.width * inset + u * width,
-                       y: rect.minY + rect.height * inset + v * height)
+        let availableWidth = rect.width * (1 - 2 * inset)
+        let availableHeight = rect.height * (1 - 2 * inset)
+        let scale = min(availableWidth / (bounds.max.x - bounds.min.x),
+                        availableHeight / (bounds.max.y - bounds.min.y))
+        let centre = SIMD2((bounds.min.x + bounds.max.x) / 2, (bounds.min.y + bounds.max.y) / 2)
+        return CGPoint(x: rect.midX + (point.x - centre.x) * scale,
+                       y: rect.midY - (point.y - centre.y) * scale)
     }
 }
 

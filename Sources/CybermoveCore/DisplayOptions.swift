@@ -13,6 +13,10 @@ public struct DisplayOptions: Equatable, Codable, Sendable {
     /// inside view does. Points outside are held at the edge of the cell.
     public var insideView = false
 
+    /// In the full view, dotted squares on every face of the cube mark the area
+    /// the inside view zooms in on, as Realtimer's cube does.
+    public var markInsideArea = true
+
     /// The lines that join signals (to the centre in mono, in pairs in stereo,
     /// along the whole group in quadro and okto).
     public var showLines = true
@@ -26,6 +30,24 @@ public struct DisplayOptions: Equatable, Codable, Sendable {
     public var dotSizeFollowsVolume = true
 
     public init() {}
+
+    /// Missing keys keep their defaults, so settings stored by an older version
+    /// (before an option existed) are not thrown away.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = DisplayOptions()
+        rotationX = try container.decodeIfPresent(Double.self, forKey: .rotationX) ?? defaults.rotationX
+        rotationY = try container.decodeIfPresent(Double.self, forKey: .rotationY) ?? defaults.rotationY
+        perspective = try container.decodeIfPresent(Double.self, forKey: .perspective) ?? defaults.perspective
+        insideView = try container.decodeIfPresent(Bool.self, forKey: .insideView) ?? defaults.insideView
+        markInsideArea = try container.decodeIfPresent(Bool.self, forKey: .markInsideArea) ?? defaults.markInsideArea
+        showLines = try container.decodeIfPresent(Bool.self, forKey: .showLines) ?? defaults.showLines
+        showCrosshairs = try container.decodeIfPresent(Bool.self, forKey: .showCrosshairs) ?? defaults.showCrosshairs
+        showVolumeBars = try container.decodeIfPresent(Bool.self, forKey: .showVolumeBars) ?? defaults.showVolumeBars
+        showSignalNumbers = try container.decodeIfPresent(Bool.self, forKey: .showSignalNumbers) ?? defaults.showSignalNumbers
+        dotSizeFollowsVolume = try container.decodeIfPresent(Bool.self, forKey: .dotSizeFollowsVolume)
+            ?? defaults.dotSizeFollowsVolume
+    }
 
     public var projection: SpaceProjection {
         SpaceProjection(rotationX: rotationX, rotationY: rotationY, perspective: perspective)

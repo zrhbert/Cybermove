@@ -26,6 +26,20 @@ public struct CubeView: View {
         (0, 1), (1, 2), (2, 3), (3, 0), (4, 5), (5, 6), (6, 7), (7, 4), (0, 4), (1, 5), (2, 6), (3, 7),
     ]
 
+    /// The six squares of side 2/3 centred on the faces of the cube, as in
+    /// Realtimer's `wuerfel_innen`.
+    static func innerSquares(_ t: Double) -> [[(Double, Double, Double)]] {
+        let m = -t
+        return [
+            [(m, -1, m), (t, -1, m), (t, -1, t), (m, -1, t)],      // bottom
+            [(m, 1, m), (t, 1, m), (t, 1, t), (m, 1, t)],          // top
+            [(-1, m, m), (-1, t, m), (-1, t, t), (-1, m, t)],      // left
+            [(1, m, m), (1, t, m), (1, t, t), (1, m, t)],          // right
+            [(m, m, -1), (t, m, -1), (t, t, -1), (m, t, -1)],      // back
+            [(m, m, 1), (t, m, 1), (t, t, 1), (m, t, 1)],          // front
+        ]
+    }
+
     public var body: some View {
         Canvas { context, size in
             draw(into: &context, size: size)
@@ -68,6 +82,19 @@ public struct CubeView: View {
             outline.addLine(to: corners[to])
         }
         context.stroke(outline, with: .color(.primary.opacity(0.55)), lineWidth: 1)
+
+        // The inside area, marked by a dotted square on each face (not in the
+        // inside view itself, where the whole cube is that area).
+        if options.markInsideArea && !options.insideView {
+            var squares = Path()
+            let third = 1.0 / 3
+            for face in Self.innerSquares(third) {
+                let corners = face.map { projection.screen(x: $0.0, y: $0.1, z: $0.2, in: rect) }
+                squares.addLines(corners + [corners[0]])
+            }
+            context.stroke(squares, with: .color(.primary.opacity(0.6)),
+                           style: StrokeStyle(lineWidth: 1, dash: [1.5, 2.5]))
+        }
 
         // Crosshairs: a line along each axis through every point.
         if options.showCrosshairs {
