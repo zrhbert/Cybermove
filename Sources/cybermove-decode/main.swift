@@ -11,17 +11,36 @@ func fail(_ text: String) -> Never {
     exit(2)
 }
 
-var arguments = Array(CommandLine.arguments.dropFirst())
-guard let path = arguments.first, !path.hasPrefix("--") else {
-    fail("usage: cybermove-decode <file-or-fifo> [--events] [--channels 14,15]")
-}
-arguments.removeFirst()
+// Show each line as it happens, also when the output goes to a file or a pipe.
+setvbuf(stdout, nil, _IOLBF, 0)
 
+let usage = """
+    usage: cybermove-decode <file-or-fifo> [--events] [--channels 14,15]
+           cybermove-decode --coremidi [source-id] [--events] [--channels 14,15]
+           cybermove-decode --list-midi
+    """
+
+var arguments = Array(CommandLine.arguments.dropFirst())
+var path: String?
+var useCoreMIDI = false
+var coreMIDISourceID: Int32?
 var showEvents = false
 var config = CybermoveConfig()
+
 while let option = arguments.first {
     arguments.removeFirst()
     switch option {
+    case "--list-midi":
+        let sources = CoreMIDIDevices.sources()
+        if sources.isEmpty { print("no MIDI sources") }
+        for source in sources { print("\(source.id)\t\(source.name)") }
+        exit(0)
+    case "--coremidi":
+        useCoreMIDI = true
+        if let next = arguments.first, let id = Int32(next) {
+            coreMIDISourceID = id
+            arguments.removeFirst()
+        }
     case "--events":
         showEvents = true
     case "--channels":
@@ -33,8 +52,18 @@ while let option = arguments.first {
         }
         config = CybermoveConfig(channels: channels)
     default:
-        fail("unknown option \(option)")
+        if option.hasPrefix("--") || path != nil { fail("unknown option \(option)\n\(usage)") }
+        path = option
     }
+}
+
+let byteSource: any MidiByteSource
+if useCoreMIDI {
+    byteSource = CoreMIDIByteSource(sourceID: coreMIDISourceID)
+} else if let path {
+    byteSource = FileByteSource(path: path)
+} else {
+    fail(usage)
 }
 
 var parser = MidiParser()
@@ -46,7 +75,7 @@ var stops = 0
 var signalChanges = 0
 var ignored = 0
 
-for await chunk in FileByteSource(path: path).bytes() {
+for await chunk in byteSource.bytes() {
     byteCount += chunk.count
     for message in parser.feed(chunk) {
         messageCount += 1

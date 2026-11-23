@@ -36,12 +36,33 @@ byte (no running status) and two Stop messages per stop.
 
 ## The app
 
-`swift run Cybermove` opens the window and starts following `/tmp/cybermove.fifo`
-(it creates the FIFO). The left side lists the 32 signals of the chosen system.
-The right side is a grid of cubes laid out like Realtimer's CMO window, in the
-same four graphics modes: mono (one signal per cube, a line from the centre),
-stereo (pairs joined), quadro and okto (four or eight signals on one line).
-The channel buttons choose which CMI system is shown.
+`swift run Cybermove` opens the window. The left side lists the 32 signals of the
+chosen system. The right side is a grid of cubes laid out like Realtimer's CMO
+window, in the same four graphics modes: mono (one signal per cube, a line from
+the centre), stereo (pairs joined), quadro and okto (four or eight signals on
+one line). The channel buttons choose which CMI system is shown.
+
+The **Source** menu picks where the MIDI comes from:
+
+| Source | Use |
+|---|---|
+| Hatari FIFO | Hatari writes its MIDI output into a FIFO that the app creates (`/tmp/cybermove.fifo`) |
+| All MIDI inputs | every CoreMIDI input, for an Atari connected through a MIDI interface |
+| a named input | one CoreMIDI input; the list follows plugging and unplugging |
+
+The source, FIFO path and graphics mode are remembered between runs.
+
+### Trying CoreMIDI without an Atari
+
+`cybermove-midi-replay` plays a capture through a virtual MIDI source at the speed of
+a real MIDI cable, so the app (or any other MIDI program) sees it like hardware:
+
+```sh
+swift run cybermove-midi-replay Tests/CybermoveCoreTests/Fixtures/realtimer-play.bin --loop
+```
+
+`cybermove-decode --list-midi` lists the inputs and `cybermove-decode --coremidi [id] --events`
+prints what arrives on one of them.
 
 ## Try it with Hatari
 
@@ -63,25 +84,28 @@ Atari ST Dev VS Code extension has none. Decode a recording instead with
 
 | Path | Contents |
 |---|---|
-| `Sources/CybermoveCore` | MIDI parser, CMO-style decoder, projection math, byte sources. No UI. |
+| `Sources/CybermoveCore` | MIDI parser, CMO-style decoder, projection math, FIFO and CoreMIDI sources. No UI. |
 | `Sources/CybermoveUI` | SwiftUI table, cube grid and the controller that follows a FIFO |
 | `Sources/Cybermove` | the macOS app |
 | `Sources/cybermove-decode` | command-line decoder for captures and live FIFOs |
 | `Sources/cybermove-snapshot` | renders the window to a PNG from a capture, for checking the display |
+| `Sources/cybermove-midi-replay` | plays a capture through a virtual CoreMIDI source |
 | `Tests/CybermoveCoreTests` | parser and decoder tests, plus the real capture |
 
 `swift test` runs everything.
 
 ## Design
 
-The decoder only depends on a byte stream (`MidiByteSource`). The Hatari FIFO
-is the first source; a CoreMIDI source for real hardware is next, and a
-bidirectional port can later sit beside it without touching the decoder.
+The decoder only depends on a byte stream (`MidiByteSource`). The Hatari FIFO and
+CoreMIDI are the two sources so far; CoreMIDI delivers Universal MIDI Packets, which
+`UMP` converts back to classic MIDI bytes. A bidirectional port can later sit beside
+them without touching the decoder.
 
 ## Roadmap
 
 1. Core library and command-line decoder (done).
 2. SwiftUI app with the coordinate table and the CMO-style cube grid (done).
-3. CoreMIDI source for a physical connection, and an Xcode wrapper for a proper app bundle.
-4. Display options from Realtimer's setup: crosshairs, perspective angles, per-signal line switches.
-5. Later: sending data to the Atari (transport, MMC, MTC position).
+3. CoreMIDI source for a physical connection (done; verified with a virtual source, not yet with a real interface).
+4. An Xcode wrapper for a proper app bundle.
+5. Display options from Realtimer's setup: crosshairs, perspective angles, per-signal line switches.
+6. Later: sending data to the Atari (transport, MMC, MTC position).

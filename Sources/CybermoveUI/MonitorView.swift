@@ -67,11 +67,24 @@ public struct MonitorView: View {
 
     private var controls: some View {
         HStack(spacing: 12) {
-            TextField("FIFO path", text: $controller.fifoPath)
-                .textFieldStyle(.roundedBorder)
-                .font(.system(.body, design: .monospaced))
-                .frame(minWidth: 220)
-                .disabled(controller.isRunning)
+            Picker("Source", selection: $controller.source) {
+                Text("Hatari FIFO").tag(SourceChoice.fifo)
+                Text("All MIDI inputs").tag(SourceChoice.allMIDIInputs)
+                if !controller.offeredMIDISources.isEmpty {
+                    Divider()
+                    ForEach(controller.offeredMIDISources) { endpoint in
+                        Text(endpoint.name).tag(SourceChoice.midi(id: endpoint.id))
+                    }
+                }
+            }
+            .frame(width: 280)
+            if controller.source == .fifo {
+                TextField("FIFO path", text: $controller.fifoPath)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(.body, design: .monospaced))
+                    .frame(minWidth: 160)
+                    .disabled(controller.isRunning)
+            }
             Button(controller.isRunning ? "Stop" : "Start") {
                 if controller.isRunning { controller.stop() } else { controller.start() }
             }
@@ -92,5 +105,12 @@ public struct MonitorView: View {
             }
         }
         .padding(8)
+        .task {
+            // Interfaces come and go; keep the list of inputs current.
+            while !Task.isCancelled {
+                controller.refreshMIDISources()
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
     }
 }

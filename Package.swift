@@ -10,6 +10,7 @@ let package = Package(
         .executable(name: "Cybermove", targets: ["Cybermove"]),
         .executable(name: "cybermove-decode", targets: ["cybermove-decode"]),
         .executable(name: "cybermove-snapshot", targets: ["cybermove-snapshot"]),
+        .executable(name: "cybermove-midi-replay", targets: ["cybermove-midi-replay"]),
     ],
     targets: [
         // MIDI byte parser, CMO-style decoder, projection math and input sources. No UI.
@@ -22,6 +23,8 @@ let package = Package(
         .executableTarget(name: "cybermove-decode", dependencies: ["CybermoveCore"]),
         // Development tool: render the window to a PNG from a capture.
         .executableTarget(name: "cybermove-snapshot", dependencies: ["CybermoveUI"]),
+        // Development tool: play a capture through a virtual CoreMIDI source.
+        .executableTarget(name: "cybermove-midi-replay", dependencies: ["CybermoveCore"]),
         .testTarget(
             name: "CybermoveCoreTests",
             dependencies: ["CybermoveCore"],
