@@ -36,7 +36,14 @@ byte (no running status) and two Stop messages per stop.
 
 ## The app
 
-`swift run Cybermove` opens the window. The left side lists the 32 signals of the
+`scripts/make-app.sh` builds `build/Cybermove.app` (add `--open` to start it): a real
+app bundle with an icon, the identifier `io.github.zrhbert.Cybermove` and an ad-hoc
+signature, which is enough to run it on the Mac that built it. `swift run Cybermove`
+also works for quick tests, without the bundle. Distributing the app to other Macs
+would need a Developer ID signature and notarization. The icon is drawn by
+`scripts/make_icon.py` and the generated `Resources/AppIcon.icns` is committed.
+
+The window: The left side lists the 32 signals of the
 chosen system. The right side is a grid of cubes laid out like Realtimer's CMO
 window, in the same four graphics modes: mono (one signal per cube, a line from
 the centre), stereo (pairs joined), quadro and okto (four or eight signals on
@@ -106,6 +113,6 @@ them without touching the decoder.
 1. Core library and command-line decoder (done).
 2. SwiftUI app with the coordinate table and the CMO-style cube grid (done).
 3. CoreMIDI source for a physical connection (done; verified with a virtual source, not yet with a real interface).
-4. An Xcode wrapper for a proper app bundle.
+4. A proper app bundle with an icon (done, `scripts/make-app.sh`); signing for distribution is not.
 5. Display options from Realtimer's setup: crosshairs, perspective angles, per-signal line switches.
 6. Later: sending data to the Atari (transport, MMC, MTC position).
