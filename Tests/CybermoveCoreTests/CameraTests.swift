@@ -215,9 +215,24 @@ import Testing
                         let point = camera.screen(p, in: rect, inset: 0.05)
                         #expect(rect.insetBy(dx: -0.5, dy: -0.5).contains(point))
                     } } }
-                    #expect(close(extent, 1, 1e-9), "yaw \(yaw) pitch \(pitch) fov \(fov): extent \(extent)")
+                    #expect(close(extent, Camera.fitExtent, 1e-9), "yaw \(yaw) pitch \(pitch) fov \(fov): extent \(extent)")
                 }
             }
+        }
+    }
+
+    @Test func theInsideAreaFitsLikeTheWholeCube() {
+        for (name, preset) in Camera.presets {
+            let camera = preset.resolved
+            var whole = 0.0, inside = 0.0
+            for sx in [-1.0, 1] { for sy in [-1.0, 1] { for sz in [-1.0, 1] {
+                let a = camera.project(SIMD3(sx, sy, sz))!
+                whole = max(whole, abs(a.x), abs(a.y))
+                let b = camera.project(SIMD3(sx, sy, sz) / 3, halfSize: 1.0 / 3)!
+                inside = max(inside, abs(b.x), abs(b.y))
+            } } }
+            #expect(close(whole, inside, 1e-9), "\(name)")
+            #expect(close(whole, Camera.fitExtent, 1e-9), "\(name)")
         }
     }
 
@@ -242,7 +257,7 @@ import Testing
             let camera = preset.resolved
             for sx in [-1.0, 1] { for sy in [-1.0, 1] { for sz in [-1.0, 1] {
                 let p = camera.project(SIMD3(sx, sy, sz))!
-                #expect(abs(p.x) <= 1 + 1e-9 && abs(p.y) <= 1 + 1e-9, "\(name)")
+                #expect(abs(p.x) <= Camera.fitExtent + 1e-9 && abs(p.y) <= Camera.fitExtent + 1e-9, "\(name)")
             } } }
         }
     }

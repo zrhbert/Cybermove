@@ -34,7 +34,8 @@ public struct ProjectedPoint: Equatable, Sendable {
 ///
 /// With `fitToView` on, the picture is scaled so that the whole cube, seen
 /// from the current direction, just fills the view, and `zoom` is relative to
-/// that (1 is a snug fit). With it off, `zoom` 1 is a fixed size that keeps
+/// that (1 is a snug fit, for the whole cube and, in the inside view, for the
+/// inside area, so switching between the two keeps the size). With it off, `zoom` 1 is a fixed size that keeps
 /// the cube inside the view from every direction, but a cube seen face-on
 /// then fills only about 60% of it.
 public struct Camera: Equatable, Codable, Sendable {
@@ -86,8 +87,14 @@ public struct Camera: Equatable, Codable, Sendable {
 
     // MARK: - Fitting
 
-    /// How much the picture must be scaled for the whole cube to fill the view
-    /// exactly from the current direction (at zoom 1, before `fitToView`).
+    /// How far the fitted cube reaches towards the edge of its cell, leaving a
+    /// margin for dots, labels and the line width.
+    public static let fitExtent = 0.9
+
+    /// How much the picture must be scaled for the whole cube to fill its cell
+    /// (up to `fitExtent`) from the current direction, at zoom 1. The same
+    /// factor fits the inside area when `halfSize` is 1/3, because that area
+    /// is a cube of its own.
     public var fitFactor: Double {
         var camera = self
         camera.zoom = 1
@@ -97,7 +104,7 @@ public struct Camera: Equatable, Codable, Sendable {
             guard let p = camera.project(SIMD3(sx, sy, sz)) else { continue }
             extent = max(extent, abs(p.x), abs(p.y))
         } } }
-        return extent > 0 ? 1 / extent : 1
+        return extent > 0 ? Self.fitExtent / extent : 1
     }
 
     /// The camera to draw with: `fitToView` and `zoom` folded into a fixed

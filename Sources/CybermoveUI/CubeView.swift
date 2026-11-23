@@ -60,9 +60,7 @@ public struct CubeView: View {
 
     private func draw(into context: inout GraphicsContext, size: CGSize) {
         let rect = CGRect(origin: .zero, size: size)
-        // The inside view looks at the middle third, which the fit would ignore.
-        let camera = options.insideView ? { var c = options.camera; c.fitToView = false; return c.resolved }()
-                                        : options.camera.resolved
+        let camera = options.camera.resolved
         let range = mode.signals(inCube: cube)
         // The inside view frames the middle third of the cube; whatever lies
         // outside is cut off by the cell.

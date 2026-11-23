@@ -73,7 +73,7 @@ The **Display** button opens the settings.
 | Yaw, Pitch, Roll | full rotation, -180 to 180 degrees each; pitch past 90 shows the cube from below and upside down |
 | Perspective (field of view) | the lens angle: 0 is orthographic with no perspective, 30 is the default, 100 a strong wide angle. The cube keeps its size on screen, only the strength of the perspective changes |
 | Zoom | scales the picture, relative to the fit below |
-| Keep the whole cube in view | on by default: the picture is scaled so that the whole cube, from the current direction, just fills its cell, and the zoom is relative to that. Off: a fixed size that is safe from every direction (a cube seen face-on then fills about 60% of the cell) |
+| Keep the whole cube in view | on by default: the picture is scaled so that the whole cube, from the current direction, fills its cell (with a 10% margin), and the zoom is relative to that. In the inside view the inside area is fitted the same way, so switching between the two views keeps the size and the zoom needs no adjusting. Off: a fixed size that is safe from every direction (a cube seen face-on then fills about 60% of the cell) |
 | Presets | oblique, isometric, front, side, top and wide angle views |
 | Inside view | zoom in on the middle third of the cube, like "Innenraum" |
 | Mark the inside area | in the full view, a dotted square on each face shows what the inside view zooms in on |
