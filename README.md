@@ -28,6 +28,15 @@ Note Off, Clock and everything else are ignored, as in CMO. Velocity 0 is a
 real value, not a note off. Realtimer sends every message with its own status
 byte (no running status) and two Stop messages per stop.
 
+## The app
+
+`swift run Cybermove` opens the window and starts following `/tmp/cybermove.fifo`
+(it creates the FIFO). The left side lists the 32 signals of the chosen system.
+The right side is a grid of cubes laid out like Realtimer's CMO window, in the
+same four graphics modes: mono (one signal per cube, a line from the centre),
+stereo (pairs joined), quadro and okto (four or eight signals on one line).
+The channel buttons choose which CMI system is shown.
+
 ## Try it with Hatari
 
 Hatari needs a MIDI input as well, otherwise it disables MIDI completely. The
@@ -48,8 +57,11 @@ Atari ST Dev VS Code extension has none. Decode a recording instead with
 
 | Path | Contents |
 |---|---|
-| `Sources/CybermoveCore` | MIDI parser, CMO-style decoder, byte sources. No UI. |
+| `Sources/CybermoveCore` | MIDI parser, CMO-style decoder, projection math, byte sources. No UI. |
+| `Sources/CybermoveUI` | SwiftUI table, cube grid and the controller that follows a FIFO |
+| `Sources/Cybermove` | the macOS app |
 | `Sources/cybermove-decode` | command-line decoder for captures and live FIFOs |
+| `Sources/cybermove-snapshot` | renders the window to a PNG from a capture, for checking the display |
 | `Tests/CybermoveCoreTests` | parser and decoder tests, plus the real capture |
 
 `swift test` runs everything.
@@ -63,7 +75,7 @@ bidirectional port can later sit beside it without touching the decoder.
 ## Roadmap
 
 1. Core library and command-line decoder (done).
-2. SwiftUI app with the CMO-style coordinate table.
-3. 3D cube view modelled on Realtimer's A3D.
-4. CoreMIDI source for a physical connection.
+2. SwiftUI app with the coordinate table and the CMO-style cube grid (done).
+3. CoreMIDI source for a physical connection, and an Xcode wrapper for a proper app bundle.
+4. Display options from Realtimer's setup: crosshairs, perspective angles, per-signal line switches.
 5. Later: sending data to the Atari (transport, MMC, MTC position).
