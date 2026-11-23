@@ -6,7 +6,7 @@ import SwiftUI
 ///
 /// - drag: turn the cubes
 /// - two-finger scroll (or the mouse wheel): zoom
-/// - three fingers up or down on the trackpad: perspective
+/// - the same with Command held: perspective
 /// - pinch: zoom, rotate with two fingers: roll about the line of sight
 /// - double-click: back to the default view
 struct CameraInteraction: NSViewRepresentable {
@@ -31,18 +31,9 @@ struct CameraInteraction: NSViewRepresentable {
         /// Zoom per point of two-finger scrolling, and per line of a mouse wheel.
         private static let zoomPerPoint = 0.005
         private static let zoomPerLine = 0.05
-        /// Field of view when the three fingers cross the trackpad's whole height.
-        private static let degreesPerTrackpadHeight = 120.0
-
-        /// The three fingers' average height on the trackpad (0 bottom, 1 top).
-        private var threeFingerHeight: Double?
-
-        override init(frame: NSRect) {
-            super.init(frame: frame)
-            allowedTouchTypes = [.indirect]
-        }
-
-        required init?(coder: NSCoder) { fatalError("not used") }
+        /// Degrees of field of view per point of Command-scrolling, and per wheel line.
+        private static let perspectivePerPoint = 0.2
+        private static let perspectivePerLine = 2.0
 
         override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
@@ -76,28 +67,13 @@ struct CameraInteraction: NSViewRepresentable {
         override func scrollWheel(with event: NSEvent) {
             // Momentum after the fingers lift would zoom on by itself.
             guard event.momentumPhase.isEmpty else { return }
-            let rate = event.hasPreciseScrollingDeltas ? Self.zoomPerPoint : Self.zoomPerLine
-            edit { $0.scaleZoom(by: exp(Double(event.scrollingDeltaY) * rate)) }
-        }
-
-        // MARK: Three fingers
-
-        override func touchesBegan(with event: NSEvent) { trackThreeFingers(event) }
-        override func touchesMoved(with event: NSEvent) { trackThreeFingers(event) }
-        override func touchesEnded(with event: NSEvent) { trackThreeFingers(event) }
-        override func touchesCancelled(with event: NSEvent) { threeFingerHeight = nil }
-
-        private func trackThreeFingers(_ event: NSEvent) {
-            let touches = event.touches(matching: .touching, in: self)
-            guard touches.count == 3 else {
-                threeFingerHeight = nil
-                return
+            let precise = event.hasPreciseScrollingDeltas
+            let delta = Double(event.scrollingDeltaY)
+            if event.modifierFlags.contains(.command) {
+                edit { $0.adjustFieldOfView(by: delta * (precise ? Self.perspectivePerPoint : Self.perspectivePerLine)) }
+            } else {
+                edit { $0.scaleZoom(by: exp(delta * (precise ? Self.zoomPerPoint : Self.zoomPerLine))) }
             }
-            let height = touches.reduce(0.0) { $0 + Double($1.normalizedPosition.y) } / 3
-            if let last = threeFingerHeight {
-                edit { $0.adjustFieldOfView(by: (height - last) * Self.degreesPerTrackpadHeight) }
-            }
-            threeFingerHeight = height
         }
     }
 }

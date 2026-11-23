@@ -68,13 +68,11 @@ share the view. In the cube area:
 |---|---|
 | drag | turn the cubes |
 | two-finger scroll (or the mouse wheel) | zoom |
-| three fingers up or down on the trackpad | perspective (field of view) |
+| ⌘ and two-finger scroll (or the mouse wheel) | perspective (field of view) |
 | pinch | zoom |
 | two-finger rotate | roll about the line of sight |
 | double-click | back to the default view |
 
-(Three-finger gestures can be taken by the system: in System Settings > Trackpad, set Mission
-Control and App Expose to four fingers, and do not use three-finger drag.)
 A small X, Y, Z indicator in the first cube shows how the view is turned.
 
 The **Display** button opens the settings.
