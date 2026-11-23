@@ -11,6 +11,9 @@ let package = Package(
         .executable(name: "cybermove-decode", targets: ["cybermove-decode"]),
         .executable(name: "cybermove-snapshot", targets: ["cybermove-snapshot"]),
         .executable(name: "cybermove-midi-replay", targets: ["cybermove-midi-replay"]),
+        .executable(name: "cybermove-midi-send", targets: ["cybermove-midi-send"]),
+        .library(name: "HatariMidiBridgeKit", targets: ["HatariMidiBridgeKit"]),
+        .executable(name: "HatariMidiBridge", targets: ["HatariMidiBridge"]),
     ],
     targets: [
         // MIDI byte parser, CMO-style decoder, projection math and input sources. No UI.
@@ -25,6 +28,17 @@ let package = Package(
         .executableTarget(name: "cybermove-snapshot", dependencies: ["CybermoveUI"]),
         // Development tool: play a capture through a virtual CoreMIDI source.
         .executableTarget(name: "cybermove-midi-replay", dependencies: ["CybermoveCore"]),
+        // Development tool: send MIDI bytes to a CoreMIDI destination.
+        .executableTarget(name: "cybermove-midi-send", dependencies: ["CybermoveCore"]),
+        // The bridge between Hatari's MIDI files (FIFOs) and CoreMIDI, in both directions.
+        .target(name: "HatariMidiBridgeKit", dependencies: ["CybermoveCore"]),
+        // The headless command-line / LaunchAgent program built on it.
+        .executableTarget(name: "HatariMidiBridge", dependencies: ["HatariMidiBridgeKit"]),
+        .testTarget(
+            name: "HatariMidiBridgeKitTests",
+            dependencies: ["HatariMidiBridgeKit", "CybermoveCore"],
+            resources: [.copy("Fixtures")]
+        ),
         .testTarget(
             name: "CybermoveCoreTests",
             dependencies: ["CybermoveCore"],
