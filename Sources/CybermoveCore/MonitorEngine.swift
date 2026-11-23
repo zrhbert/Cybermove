@@ -21,9 +21,9 @@ public struct MonitorSnapshot: Sendable {
 
 /// Feeds bytes through the parser and the decoder and hands out consistent
 /// snapshots. Thread safe: bytes arrive on a reader thread while the user
-/// interface takes snapshots on the main thread at its own pace. That is why
-/// the UI does not observe individual changes; at a few hundred messages per
-/// second it just samples the latest state.
+/// interface takes snapshots on the main thread at its own pace. The UI does
+/// not observe individual changes; the change handler tells it that new data
+/// is there, and it takes one snapshot per frame however many messages came.
 public final class MonitorEngine: Sendable {
     private struct State {
         var parser = MidiParser()
