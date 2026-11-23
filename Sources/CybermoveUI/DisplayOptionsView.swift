@@ -62,7 +62,12 @@ public struct DisplayOptionsView: View {
                 Text(zeroLabel != nil && shown < 1 ? zeroLabel! : String(format: "%.\(decimals)f", shown) + unit)
                     .monospacedDigit().foregroundStyle(.secondary)
             }
-            Slider(value: value, in: range, step: step)
+            // No `step:` on the Slider: it gives the NSSlider a tick mark for every
+            // step (361 for the angles), and laying those out took about a
+            // second every time the popover opened. Snap the value instead.
+            Slider(value: Binding(get: { value.wrappedValue },
+                                  set: { value.wrappedValue = ($0 / step).rounded() * step }),
+                   in: range)
         }
     }
 }
