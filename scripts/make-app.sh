@@ -1,8 +1,9 @@
 #!/bin/sh
 # Build Cybermove and assemble a real macOS app bundle: build/Cybermove.app
 #
-#   scripts/make-app.sh            release build
+#   scripts/make-app.sh            release build, universal (arm64 and x86_64)
 #   scripts/make-app.sh debug      debug build
+#   scripts/make-app.sh --native   only for this Mac's CPU (faster to build)
 #   scripts/make-app.sh --open     also launch it afterwards
 #
 # The bundle gets a stable identifier (so the stored settings have a fixed
@@ -15,12 +16,14 @@ cd "$(dirname "$0")/.."
 
 configuration=release
 open_after=no
+architectures="--arch arm64 --arch x86_64"
 for argument in "$@"; do
     case "$argument" in
         debug) configuration=debug ;;
         release) configuration=release ;;
+        --native) architectures="" ;;
         --open) open_after=yes ;;
-        *) echo "usage: $0 [debug|release] [--open]" >&2; exit 2 ;;
+        *) echo "usage: $0 [debug|release] [--native] [--open]" >&2; exit 2 ;;
     esac
 done
 
@@ -28,8 +31,9 @@ identifier="io.github.zrhbert.Cybermove"
 version="0.2.0"
 app="build/Cybermove.app"
 
-swift build -c "$configuration" --product Cybermove
-binary="$(swift build -c "$configuration" --show-bin-path)/Cybermove"
+# shellcheck disable=SC2086   # $architectures is deliberately word-split
+swift build -c "$configuration" $architectures --product Cybermove
+binary="$(swift build -c "$configuration" $architectures --show-bin-path)/Cybermove"
 
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
@@ -63,5 +67,5 @@ plutil -lint "$app/Contents/Info.plist" >/dev/null
 codesign --force --sign - "$app" >/dev/null 2>&1
 codesign --verify --strict "$app"
 
-echo "built $app ($configuration, $identifier)"
+echo "built $app ($configuration, $identifier, $(lipo -archs "$app/Contents/MacOS/Cybermove"))"
 if [ "$open_after" = yes ]; then open "$app"; fi

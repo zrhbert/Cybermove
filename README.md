@@ -36,7 +36,7 @@ byte (no running status) and two Stop messages per stop.
 
 ## The app
 
-`scripts/make-app.sh` builds `build/Cybermove.app` (add `--open` to start it): a real
+`scripts/make-app.sh` builds `build/Cybermove.app` (add `--open` to start it; `--native` builds only for this Mac's CPU, which is faster). The app is universal: one binary for Apple Silicon (arm64) and Intel (x86_64) Macs. It is a real
 app bundle with an icon, the identifier `io.github.zrhbert.Cybermove` and an ad-hoc
 signature, which is enough to run it on the Mac that built it. `swift run Cybermove`
 also works for quick tests, without the bundle. Distributing the app to other Macs
