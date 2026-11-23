@@ -7,6 +7,12 @@ CMO modules. This project shows the same kind of display on the Mac, fed by
 the MIDI data Realtimer sends, either from Hatari or from an Atari connected
 to the Mac through a MIDI interface.
 
+![Realtimer running in Hatari on the left, Cybermove showing its MIDI output on the right](docs/realtimer-and-cybermove.png)
+
+Realtimer playing in Hatari (left) and Cybermove decoding its MIDI output live
+(right, stereo mode). Signals 24 to 31 move; the other cubes show idle signals
+at the centre.
+
 Scope for now: **receive and display only.** The structure leaves room for
 sending data back to the Atari later (see Design).
 
