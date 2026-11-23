@@ -7,6 +7,7 @@ import SwiftUI
 // capture file, without opening a window.
 //
 //   cybermove-snapshot <capture.bin> <out.png> [--fraction 0.5] [--mode okto] [--system 0]
+//       [--rot-x 60] [--rot-y 50] [--persp 0] [--crosshairs] [--volume-bars] [--numbers] [--no-lines] [--inside]
 
 func fail(_ text: String) -> Never {
     FileHandle.standardError.write(Data((text + "\n").utf8))
@@ -23,11 +24,24 @@ let outputPath = arguments.removeFirst()
 var fraction = 0.5
 var mode = GraphicsMode.quadro
 var system = 0
+var options = DisplayOptions()
 while let option = arguments.first {
     arguments.removeFirst()
+    // flags without a value
+    switch option {
+    case "--crosshairs": options.showCrosshairs = true; continue
+    case "--volume-bars": options.showVolumeBars = true; continue
+    case "--numbers": options.showSignalNumbers = true; continue
+    case "--no-lines": options.showLines = false; continue
+    case "--inside": options.insideView = true; continue
+    default: break
+    }
     guard let value = arguments.first else { fail("\(option) needs a value") }
     arguments.removeFirst()
     switch option {
+    case "--rot-x": options.rotationX = Double(value) ?? options.rotationX
+    case "--rot-y": options.rotationY = Double(value) ?? options.rotationY
+    case "--persp": options.perspective = Double(value) ?? options.perspective
     case "--fraction": fraction = Double(value) ?? fraction
     case "--system": system = Int(value) ?? system
     case "--mode":
@@ -43,7 +57,7 @@ guard let data = FileManager.default.contents(atPath: capturePath) else { fail("
 let engine = MonitorEngine()
 engine.ingest([UInt8](data.prefix(Int(Double(data.count) * fraction))))
 
-let content = MonitorContent(snapshot: engine.snapshot(), mode: mode, system: system)
+let content = MonitorContent(snapshot: engine.snapshot(), mode: mode, system: system, options: options)
     .frame(width: 900, height: 560)
     .background(Color(nsColor: .windowBackgroundColor))
 let renderer = ImageRenderer(content: content)

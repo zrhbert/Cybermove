@@ -7,11 +7,13 @@ public struct MonitorContent: View {
     let snapshot: MonitorSnapshot
     let mode: GraphicsMode
     let system: Int
+    let options: DisplayOptions
 
-    public init(snapshot: MonitorSnapshot, mode: GraphicsMode, system: Int) {
+    public init(snapshot: MonitorSnapshot, mode: GraphicsMode, system: Int, options: DisplayOptions = DisplayOptions()) {
         self.snapshot = snapshot
         self.mode = mode
         self.system = system
+        self.options = options
     }
 
     public var body: some View {
@@ -24,7 +26,7 @@ public struct MonitorContent: View {
             SignalTableView(signals: signals)
                 .padding(8)
                 .frame(width: 250, alignment: .top)
-            CubeGridView(mode: mode, signals: signals)
+            CubeGridView(mode: mode, signals: signals, options: options)
         }
         .padding(8)
     }
@@ -39,6 +41,7 @@ func statusText(_ snapshot: MonitorSnapshot, isRunning: Bool, now: Date) -> Stri
 /// The live window: controls on top, the sampled state below.
 public struct MonitorView: View {
     @Bindable var controller: MonitorController
+    @State private var showingDisplayOptions = false
 
     public init(controller: MonitorController) {
         self.controller = controller
@@ -51,7 +54,8 @@ public struct MonitorView: View {
             TimelineView(.periodic(from: .now, by: 1.0 / 30.0)) { timeline in
                 let snapshot = controller.engine.snapshot()
                 VStack(spacing: 0) {
-                    MonitorContent(snapshot: snapshot, mode: controller.mode, system: controller.selectedSystem)
+                    MonitorContent(snapshot: snapshot, mode: controller.mode, system: controller.selectedSystem,
+                                   options: controller.options)
                     Divider()
                     HStack {
                         Text(statusText(snapshot, isRunning: controller.isRunning, now: timeline.date))
@@ -100,6 +104,14 @@ public struct MonitorView: View {
             }
             .pickerStyle(.segmented)
             .frame(width: 260)
+            Button {
+                showingDisplayOptions.toggle()
+            } label: {
+                Label("Display", systemImage: "slider.horizontal.3")
+            }
+            .popover(isPresented: $showingDisplayOptions, arrowEdge: .bottom) {
+                DisplayOptionsView(options: $controller.options)
+            }
             if let message = controller.errorMessage {
                 Text(message).foregroundStyle(.red).font(.caption)
             }

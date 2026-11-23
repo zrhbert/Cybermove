@@ -62,8 +62,9 @@ import Testing
     }
 
     @Test func unitPositionScalesWireRangeToTheCube() {
-        #expect(SignalState(x: -64, y: 0, z: 63, volume: 127).unitPosition.x == -1)
-        #expect(SignalState(x: 32).unitPosition.x == 0.5)
+        #expect(SignalState(x: 63).unitPosition.x == 1)
+        #expect(SignalState(x: -63).unitPosition.x == -1)
+        #expect(abs(SignalState(x: -64).unitPosition.x - (-64.0 / 63)) < 1e-12)
         #expect(SignalState(volume: 127).unitVolume == 1)
     }
 }

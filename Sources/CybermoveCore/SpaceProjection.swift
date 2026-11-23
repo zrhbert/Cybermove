@@ -46,11 +46,13 @@ public enum GraphicsMode: Int, CaseIterable, Sendable {
 ///
 /// Realtimer's defaults are rotation 60 and 50 degrees with no perspective.
 /// Coordinates here are -1 to +1 per axis; +z is towards the viewer.
-public struct SpaceProjection: Sendable {
+public struct SpaceProjection: Sendable, Equatable {
     public var rotationX: Double
     public var rotationY: Double
-    /// Depth scaling, 0 means none. The Atari value is in its own units, so
-    /// this is an approximation of its behaviour, not an exact port.
+    /// Realtimer's "Wirkung" (depth effect), 0 means none. A point at depth z
+    /// is scaled by `1 + z * perspective / 64`, which is what the Atari's
+    /// lookup tables compute (`50 + z * perspective / 128` against 50, with z
+    /// in its +-100 units).
     public var perspective: Double
 
     public init(rotationX: Double = 60, rotationY: Double = 50, perspective: Double = 0) {
@@ -66,7 +68,7 @@ public struct SpaceProjection: Sendable {
 
     /// Projection onto the picture plane, x to the right and y up, unscaled.
     public func plane(x: Double, y: Double, z: Double) -> SIMD2<Double> {
-        let scale = 1 + z * perspective / 100
+        let scale = max(0.05, 1 + z * perspective / 64)
         return SIMD2((x - z * shiftX) * scale, (y - z * shiftY) * scale)
     }
 
@@ -101,9 +103,11 @@ public struct SpaceProjection: Sendable {
 }
 
 extension SignalState {
-    /// Coordinates scaled to the -1...1 cube. The wire range is -64...63.
+    /// Coordinates scaled to the -1...1 cube. Realtimer maps +-63 (its MAXKOOR)
+    /// onto the cube edges, so +63 is exactly 1; the wire value -64 lands just
+    /// outside, as it does on the Atari.
     public var unitPosition: (x: Double, y: Double, z: Double) {
-        (Double(x) / 64, Double(y) / 64, Double(z) / 64)
+        (Double(x) / 63, Double(y) / 63, Double(z) / 63)
     }
 
     /// Volume as 0...1.

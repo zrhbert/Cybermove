@@ -59,6 +59,24 @@ The **Source** menu picks where the MIDI comes from:
 
 The source, FIFO path and graphics mode are remembered between runs.
 
+### Display options
+
+The **Display** button opens the settings, named after Realtimer's A3D setup dialog
+where it has a counterpart. The defaults are Realtimer's.
+
+| Option | Effect |
+|---|---|
+| LR rotation, OU rotation | how far depth shifts a point sideways and up or down (60 and 50 degrees) |
+| Depth effect | Realtimer's "Wirkung": points farther away are drawn smaller (0 for none) |
+| Inside view | zoom in on the middle third of the cube, like "Innenraum" |
+| Lines between signals | the mono, stereo, quadro and okto lines |
+| Crosshairs | a line along each axis through every point ("Fadenkreuz") |
+| Volume bars | horizontal bars along the bottom of each cube |
+| Signal numbers | the number beside each point that has data |
+| Dot size follows volume | dots grow with the signal's volume |
+
+The settings are remembered between runs.
+
 ### Trying CoreMIDI without an Atari
 
 `cybermove-midi-replay` plays a capture through a virtual MIDI source at the speed of
@@ -114,5 +132,5 @@ them without touching the decoder.
 2. SwiftUI app with the coordinate table and the CMO-style cube grid (done).
 3. CoreMIDI source for a physical connection (done; verified with a virtual source, not yet with a real interface).
 4. A proper app bundle with an icon (done, `scripts/make-app.sh`); signing for distribution is not.
-5. Display options from Realtimer's setup: crosshairs, perspective angles, per-signal line switches.
+5. Display options from Realtimer's setup: rotation, perspective, crosshairs, volume bars (done); per-signal line switches are not.
 6. Later: sending data to the Atari (transport, MMC, MTC position).

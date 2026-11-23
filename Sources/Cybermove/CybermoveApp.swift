@@ -9,7 +9,7 @@ struct CybermoveApp: App {
     var body: some Scene {
         WindowGroup("Cybermove") {
             MonitorView(controller: controller)
-                .frame(minWidth: 900, minHeight: 620)
+                .frame(minWidth: 1100, minHeight: 620)
                 .task { controller.start() }
         }
     }

@@ -53,6 +53,9 @@ public final class MonitorController {
     public var mode: GraphicsMode {
         didSet { defaults.set(mode.rawValue, forKey: Key.mode) }
     }
+    public var options: DisplayOptions {
+        didSet { defaults.set(options.storedJSON, forKey: Key.options) }
+    }
     public var selectedSystem = 0
     public var channels: [UInt8] = [14, 15] {
         didSet { engine.setChannels(channels) }
@@ -70,6 +73,7 @@ public final class MonitorController {
         static let fifoPath = "fifoPath"
         static let source = "source"
         static let mode = "graphicsMode"
+        static let options = "displayOptions"
     }
 
     public init(defaults: UserDefaults = .standard, engine: MonitorEngine = MonitorEngine()) {
@@ -78,6 +82,7 @@ public final class MonitorController {
         fifoPath = defaults.string(forKey: Key.fifoPath) ?? "/tmp/cybermove.fifo"
         source = defaults.string(forKey: Key.source).flatMap(SourceChoice.init(storageValue:)) ?? .fifo
         mode = GraphicsMode(rawValue: defaults.integer(forKey: Key.mode)) ?? .quadro
+        options = DisplayOptions(storedJSON: defaults.data(forKey: Key.options))
         refreshMIDISources()
     }
 
