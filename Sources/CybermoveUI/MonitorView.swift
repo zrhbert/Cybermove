@@ -8,12 +8,15 @@ public struct MonitorContent: View {
     let mode: GraphicsMode
     let system: Int
     let options: DisplayOptions
+    let onCameraChange: ((Camera) -> Void)?
 
-    public init(snapshot: MonitorSnapshot, mode: GraphicsMode, system: Int, options: DisplayOptions = DisplayOptions()) {
+    public init(snapshot: MonitorSnapshot, mode: GraphicsMode, system: Int, options: DisplayOptions = DisplayOptions(),
+                onCameraChange: ((Camera) -> Void)? = nil) {
         self.snapshot = snapshot
         self.mode = mode
         self.system = system
         self.options = options
+        self.onCameraChange = onCameraChange
     }
 
     public var body: some View {
@@ -26,7 +29,7 @@ public struct MonitorContent: View {
             SignalTableView(signals: signals)
                 .padding(8)
                 .frame(width: 250, alignment: .top)
-            CubeGridView(mode: mode, signals: signals, options: options)
+            CubeGridView(mode: mode, signals: signals, options: options, onCameraChange: onCameraChange)
         }
         .padding(8)
     }
@@ -55,7 +58,8 @@ public struct MonitorView: View {
                 let snapshot = controller.engine.snapshot()
                 VStack(spacing: 0) {
                     MonitorContent(snapshot: snapshot, mode: controller.mode, system: controller.selectedSystem,
-                                   options: controller.options)
+                                   options: controller.options,
+                                   onCameraChange: { controller.options.camera = $0 })
                     Divider()
                     HStack {
                         Text(statusText(snapshot, isRunning: controller.isRunning, now: timeline.date))

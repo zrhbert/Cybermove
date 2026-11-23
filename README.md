@@ -61,13 +61,19 @@ The source, FIFO path and graphics mode are remembered between runs.
 
 ### Display options
 
-The **Display** button opens the settings, named after Realtimer's A3D setup dialog
-where it has a counterpart. The defaults are Realtimer's.
+The cubes are drawn by a real 3D camera that looks at the centre of the cube. All cubes
+share the view. **Drag** in the cube area to turn them, **pinch** to zoom, **rotate** with two
+fingers to twist about the line of sight, and **double-click** to return to the default view.
+A small X, Y, Z indicator in the corner shows how the view is turned.
+
+The **Display** button opens the settings.
 
 | Option | Effect |
 |---|---|
-| LR rotation, OU rotation | how far depth shifts a point sideways and up or down (60 and 50 degrees) |
-| Depth effect | Realtimer's "Wirkung": points farther away are drawn smaller (0 for none) |
+| Yaw, Pitch, Roll | full rotation, -180 to 180 degrees each; pitch past 90 shows the cube from below and upside down |
+| Perspective (field of view) | the lens angle: 0 is orthographic with no perspective, 30 is the default, 100 a strong wide angle. The cube keeps its size on screen, only the strength of the perspective changes |
+| Zoom | scales the picture (the cube fits its cell at 1) |
+| Presets | oblique, isometric, front, side, top and wide angle views |
 | Inside view | zoom in on the middle third of the cube, like "Innenraum" |
 | Mark the inside area | in the full view, a dotted square on each face shows what the inside view zooms in on |
 | Lines between signals | the mono, stereo, quadro and okto lines |
@@ -75,6 +81,13 @@ where it has a counterpart. The defaults are Realtimer's.
 | Volume bars | horizontal bars along the bottom of each cube |
 | Signal numbers | the number beside each point that has data |
 | Dot size follows volume | dots grow with the signal's volume |
+| Nearer is larger and stronger | with perspective, nearer dots are larger and nearer edges darker |
+| Axes indicator | the X, Y, Z indicator |
+
++z points towards the viewer, +x to the right and +y up when yaw, pitch and roll are 0.
+The cube's sides are always drawn 1:1, whatever the shape of the cell. Parts of a line that
+fall behind the camera (wide angles, inside view) are cut off. The inside view frames the
+middle third of the cube with the same camera, and the cell cuts off what lies outside.
 
 The settings are remembered between runs.
 
@@ -110,11 +123,11 @@ Atari ST Dev VS Code extension has none. Decode a recording instead with
 
 | Path | Contents |
 |---|---|
-| `Sources/CybermoveCore` | MIDI parser, CMO-style decoder, projection math, FIFO and CoreMIDI sources. No UI. |
+| `Sources/CybermoveCore` | MIDI parser, CMO-style decoder, camera and projection math, FIFO and CoreMIDI sources. No UI. |
 | `Sources/CybermoveUI` | SwiftUI table, cube grid and the controller that follows a FIFO |
 | `Sources/Cybermove` | the macOS app |
 | `Sources/cybermove-decode` | command-line decoder for captures and live FIFOs |
-| `Sources/cybermove-snapshot` | renders the window to a PNG from a capture, for checking the display |
+| `Sources/cybermove-snapshot` | renders the window to a PNG from a capture, for checking the display (`--yaw --pitch --roll --fov --zoom`) |
 | `Sources/cybermove-midi-replay` | plays a capture through a virtual CoreMIDI source |
 | `Tests/CybermoveCoreTests` | parser and decoder tests, plus the real capture |
 
@@ -133,5 +146,5 @@ them without touching the decoder.
 2. SwiftUI app with the coordinate table and the CMO-style cube grid (done).
 3. CoreMIDI source for a physical connection (done; verified with a virtual source, not yet with a real interface).
 4. A proper app bundle with an icon (done, `scripts/make-app.sh`); signing for distribution is not.
-5. Display options from Realtimer's setup: rotation, perspective, crosshairs, volume bars (done); per-signal line switches are not.
+5. Display options from Realtimer's setup: a full-rotation perspective camera, crosshairs, volume bars (done); per-signal line switches are not.
 6. Later: sending data to the Atari (transport, MMC, MTC position).

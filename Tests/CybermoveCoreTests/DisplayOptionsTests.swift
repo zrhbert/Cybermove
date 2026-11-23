@@ -3,53 +3,42 @@ import Testing
 @testable import CybermoveCore
 
 @Suite struct DisplayOptionsTests {
-    @Test func defaultsAreRealtimersA3DDefaults() {
+    @Test func defaultsAreAMildPerspectiveFromAboveAndTheLeft() {
         let options = DisplayOptions()
-        #expect(options.rotationX == 60)
-        #expect(options.rotationY == 50)
-        #expect(options.perspective == 0)
-        #expect(options.projection == SpaceProjection())
+        #expect(options.camera == Camera())
+        #expect(options.camera.fieldOfView > 0)
+        #expect(options.markInsideArea)
+        #expect(options.depthCues)
+        #expect(!options.insideView)
     }
 
     @Test func optionsSurviveStorage() {
         var options = DisplayOptions()
-        options.rotationX = 30
+        options.camera = Camera(yaw: 123, pitch: -77, roll: 15, fieldOfView: 55, zoom: 2)
         options.showCrosshairs = true
         options.insideView = true
         #expect(DisplayOptions(storedJSON: options.storedJSON) == options)
     }
 
     @Test func settingsFromAnOlderVersionKeepTheirValuesAndGetDefaultsForNewOptions() {
-        let old = Data(#"{"rotationX":33,"showCrosshairs":true}"#.utf8)
+        // Version 0.2 stored the oblique angles, which no longer exist.
+        let old = Data(#"{"rotationX":33,"showCrosshairs":true,"markInsideArea":false}"#.utf8)
         let options = DisplayOptions(storedJSON: old)
-        #expect(options.rotationX == 33)
         #expect(options.showCrosshairs)
-        #expect(options.rotationY == 50)
-        #expect(options.markInsideArea)
+        #expect(!options.markInsideArea)
+        #expect(options.camera == Camera())
+        #expect(options.depthCues)
     }
 
-    @Test func insideAreaIsMarkedByDefault() {
-        #expect(DisplayOptions().markInsideArea)
+    @Test func aCameraWithMissingKeysKeepsDefaults() {
+        let stored = Data(#"{"camera":{"yaw":10}}"#.utf8)
+        let options = DisplayOptions(storedJSON: stored)
+        #expect(options.camera.yaw == 10)
+        #expect(options.camera.pitch == Camera().pitch)
     }
 
     @Test func damagedStorageFallsBackToDefaults() {
         #expect(DisplayOptions(storedJSON: Data("not json".utf8)) == DisplayOptions())
         #expect(DisplayOptions(storedJSON: nil) == DisplayOptions())
-    }
-
-    @Test func perspectiveScalesByDepthLikeTheAtariTables() {
-        let projection = SpaceProjection(rotationX: 0, rotationY: 0, perspective: 32)
-        // sin(0) = 0: no depth shift, so only the scale shows. z = 1: 1 + 32/64 = 1.5
-        #expect(abs(projection.plane(x: 1, y: 0, z: 1).x - 1.5) < 1e-12)
-        // z = -1: 1 - 0.5 = 0.5
-        #expect(abs(projection.plane(x: 1, y: 0, z: -1).x - 0.5) < 1e-12)
-        // no perspective: no scaling
-        #expect(SpaceProjection(rotationX: 0, rotationY: 0, perspective: 0).plane(x: 1, y: 0, z: 1).x == 1)
-    }
-
-    @Test func extremePerspectiveNeverFlipsOrCollapsesTheCube() {
-        let projection = SpaceProjection(perspective: 1000)
-        let far = projection.plane(x: 1, y: 1, z: -1)
-        #expect(far.x.isFinite && far.y.isFinite)
     }
 }

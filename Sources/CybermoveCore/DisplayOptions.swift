@@ -1,20 +1,14 @@
 import Foundation
 
-/// How the cubes are drawn. The first group mirrors the settings of Realtimer's
-/// 3D displays; the defaults are Realtimer's.
+/// How the cubes are drawn.
 public struct DisplayOptions: Equatable, Codable, Sendable {
-    /// "LR-Rot": how far depth shifts a point sideways, in degrees.
-    public var rotationX: Double = 60
-    /// "OU-Rot": how far depth shifts a point up or down, in degrees.
-    public var rotationY: Double = 50
-    /// "Wirkung": depth scaling, 0 for none.
-    public var perspective: Double = 0
-    /// "Innenraum": zoom in on the middle third of the cube, as Realtimer's
-    /// inside view does. Points outside are held at the edge of the cell.
+    /// The view of the cubes, shared by all of them.
+    public var camera = Camera()
+    /// "Innenraum": look at the middle third of the cube only, as Realtimer's
+    /// inside view does. Points outside it are cut off by the cell.
     public var insideView = false
-
     /// In the full view, dotted squares on every face of the cube mark the area
-    /// the inside view zooms in on, as Realtimer's cube does.
+    /// the inside view looks at, as Realtimer's cube does.
     public var markInsideArea = true
 
     /// The lines that join signals (to the centre in mono, in pairs in stereo,
@@ -24,21 +18,24 @@ public struct DisplayOptions: Equatable, Codable, Sendable {
     public var showCrosshairs = false
     /// Horizontal volume bars along the bottom of each cube, as in Realtimer.
     public var showVolumeBars = false
-    /// The signal number beside each point.
+    /// The signal number beside each point that has data.
     public var showSignalNumbers = false
     /// Dots grow with the signal's volume.
     public var dotSizeFollowsVolume = true
+    /// With perspective, nearer points are drawn larger and farther ones smaller.
+    public var depthCues = true
+    /// A small X, Y, Z indicator that shows how the view is turned.
+    public var showAxes = true
 
     public init() {}
 
     /// Missing keys keep their defaults, so settings stored by an older version
-    /// (before an option existed) are not thrown away.
+    /// (before an option existed, or with options that no longer exist) still
+    /// load.
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         let defaults = DisplayOptions()
-        rotationX = try container.decodeIfPresent(Double.self, forKey: .rotationX) ?? defaults.rotationX
-        rotationY = try container.decodeIfPresent(Double.self, forKey: .rotationY) ?? defaults.rotationY
-        perspective = try container.decodeIfPresent(Double.self, forKey: .perspective) ?? defaults.perspective
+        camera = try container.decodeIfPresent(Camera.self, forKey: .camera) ?? defaults.camera
         insideView = try container.decodeIfPresent(Bool.self, forKey: .insideView) ?? defaults.insideView
         markInsideArea = try container.decodeIfPresent(Bool.self, forKey: .markInsideArea) ?? defaults.markInsideArea
         showLines = try container.decodeIfPresent(Bool.self, forKey: .showLines) ?? defaults.showLines
@@ -47,15 +44,9 @@ public struct DisplayOptions: Equatable, Codable, Sendable {
         showSignalNumbers = try container.decodeIfPresent(Bool.self, forKey: .showSignalNumbers) ?? defaults.showSignalNumbers
         dotSizeFollowsVolume = try container.decodeIfPresent(Bool.self, forKey: .dotSizeFollowsVolume)
             ?? defaults.dotSizeFollowsVolume
+        depthCues = try container.decodeIfPresent(Bool.self, forKey: .depthCues) ?? defaults.depthCues
+        showAxes = try container.decodeIfPresent(Bool.self, forKey: .showAxes) ?? defaults.showAxes
     }
-
-    public var projection: SpaceProjection {
-        SpaceProjection(rotationX: rotationX, rotationY: rotationY, perspective: perspective)
-    }
-
-    /// Value ranges for the controls.
-    public static let rotationRange: ClosedRange<Double> = 0...90
-    public static let perspectiveRange: ClosedRange<Double> = 0...40
 
     /// Stored as JSON in the user defaults. Unknown or damaged data gives the defaults.
     public init(storedJSON: Data?) {

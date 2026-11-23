@@ -1,10 +1,10 @@
 import CybermoveCore
 import SwiftUI
 
-/// One cube with the signals it shows, drawn the way Realtimer's CMO does:
-/// the oblique cube outline, and the signals joined according to the graphics
-/// mode (mono: a line from the centre to the point; stereo: a line between
-/// each pair; quadro and okto: an open line through all points).
+/// One cube with the signals it shows, seen through the shared camera. The
+/// signals are joined according to the graphics mode as in Realtimer's CMO
+/// (mono: a line from the centre to the point; stereo: a line between each
+/// pair; quadro and okto: an open line through all points).
 public struct CubeView: View {
     let cube: Int
     let mode: GraphicsMode
@@ -18,25 +18,27 @@ public struct CubeView: View {
         self.options = options
     }
 
-    private static let corners: [(Double, Double, Double)] = [
-        (-1, -1, -1), (1, -1, -1), (1, -1, 1), (-1, -1, 1),     // bottom
-        (-1, 1, -1), (1, 1, -1), (1, 1, 1), (-1, 1, 1),         // top
+    private typealias Vec = SIMD3<Double>
+
+    private static let corners: [Vec] = [
+        Vec(-1, -1, -1), Vec(1, -1, -1), Vec(1, -1, 1), Vec(-1, -1, 1),     // bottom
+        Vec(-1, 1, -1), Vec(1, 1, -1), Vec(1, 1, 1), Vec(-1, 1, 1),         // top
     ]
     private static let edges: [(Int, Int)] = [
         (0, 1), (1, 2), (2, 3), (3, 0), (4, 5), (5, 6), (6, 7), (7, 4), (0, 4), (1, 5), (2, 6), (3, 7),
     ]
 
-    /// The six squares of side 2/3 centred on the faces of the cube, as in
+    /// The six squares of side 2t centred on the faces of the cube, as in
     /// Realtimer's `wuerfel_innen`.
-    static func innerSquares(_ t: Double) -> [[(Double, Double, Double)]] {
+    static func innerSquares(_ t: Double) -> [[SIMD3<Double>]] {
         let m = -t
         return [
-            [(m, -1, m), (t, -1, m), (t, -1, t), (m, -1, t)],      // bottom
-            [(m, 1, m), (t, 1, m), (t, 1, t), (m, 1, t)],          // top
-            [(-1, m, m), (-1, t, m), (-1, t, t), (-1, m, t)],      // left
-            [(1, m, m), (1, t, m), (1, t, t), (1, m, t)],          // right
-            [(m, m, -1), (t, m, -1), (t, t, -1), (m, t, -1)],      // back
-            [(m, m, 1), (t, m, 1), (t, t, 1), (m, t, 1)],          // front
+            [Vec(m, -1, m), Vec(t, -1, m), Vec(t, -1, t), Vec(m, -1, t)],      // bottom
+            [Vec(m, 1, m), Vec(t, 1, m), Vec(t, 1, t), Vec(m, 1, t)],          // top
+            [Vec(-1, m, m), Vec(-1, t, m), Vec(-1, t, t), Vec(-1, m, t)],      // left
+            [Vec(1, m, m), Vec(1, t, m), Vec(1, t, t), Vec(1, m, t)],          // right
+            [Vec(m, m, -1), Vec(t, m, -1), Vec(t, t, -1), Vec(m, t, -1)],      // back
+            [Vec(m, m, 1), Vec(t, m, 1), Vec(t, t, 1), Vec(m, t, 1)],          // front
         ]
     }
 
@@ -58,40 +60,46 @@ public struct CubeView: View {
 
     private func draw(into context: inout GraphicsContext, size: CGSize) {
         let rect = CGRect(origin: .zero, size: size)
-        let projection = options.projection
+        let camera = options.camera
         let range = mode.signals(inCube: cube)
-        let zoom = options.insideView ? 3.0 : 1.0
+        // The inside view frames the middle third of the cube; whatever lies
+        // outside is cut off by the cell.
+        let halfSize = options.insideView ? 1.0 / 3 : 1.0
+        if options.insideView { context.clip(to: Path(rect)) }
 
-        // Where a signal's position lands in the cell. The inside view zooms in
-        // on the middle third; points outside are held at the cell's edge.
-        func screenPoint(_ x: Double, _ y: Double, _ z: Double) -> CGPoint {
-            let point = projection.screen(x: x, y: y, z: z, in: rect)
-            return CGPoint(x: min(max(point.x, rect.minX), rect.maxX),
-                           y: min(max(point.y, rect.minY), rect.maxY))
+        func screen(_ point: ProjectedPoint) -> CGPoint { camera.screen(point, in: rect) }
+        /// A path through `points` in the model, cut where it passes behind the camera.
+        func line(_ points: [Vec], closed: Bool = false, into path: inout Path) {
+            let pairs = zip(points, points.dropFirst() + (closed ? [points[0]] : []))
+            for (a, b) in pairs {
+                guard let (pa, pb) = camera.project(from: a, to: b, halfSize: halfSize) else { continue }
+                path.move(to: screen(pa))
+                path.addLine(to: screen(pb))
+            }
         }
-        func position(of index: Int) -> (x: Double, y: Double, z: Double) {
-            let p = signals[index].unitPosition
-            return (p.x * zoom, p.y * zoom, p.z * zoom)
+        func position(of index: Int) -> Vec { signals[index].unitPosition }
+
+        // Nearer edges are drawn stronger than the far ones.
+        func shade(_ depth: Double) -> Double {
+            guard options.depthCues else { return 1 }
+            return 1 - 0.55 * min(max((depth / 3.0.squareRoot() + 1) / 2, 0), 1)
         }
 
         // Cube outline.
-        var outline = Path()
-        let corners = Self.corners.map { projection.screen(x: $0.0, y: $0.1, z: $0.2, in: rect) }
         for (from, to) in Self.edges {
-            outline.move(to: corners[from])
-            outline.addLine(to: corners[to])
+            guard let (a, b) = camera.project(from: Self.corners[from], to: Self.corners[to], halfSize: halfSize)
+            else { continue }
+            var edge = Path()
+            edge.move(to: screen(a))
+            edge.addLine(to: screen(b))
+            context.stroke(edge, with: .color(.primary.opacity(0.7 * shade((a.depth + b.depth) / 2))), lineWidth: 1)
         }
-        context.stroke(outline, with: .color(.primary.opacity(0.55)), lineWidth: 1)
 
         // The inside area, marked by a dotted square on each face (not in the
         // inside view itself, where the whole cube is that area).
         if options.markInsideArea && !options.insideView {
             var squares = Path()
-            let third = 1.0 / 3
-            for face in Self.innerSquares(third) {
-                let corners = face.map { projection.screen(x: $0.0, y: $0.1, z: $0.2, in: rect) }
-                squares.addLines(corners + [corners[0]])
-            }
+            for face in Self.innerSquares(1.0 / 3) { line(face, closed: true, into: &squares) }
             context.stroke(squares, with: .color(.primary.opacity(0.6)),
                            style: StrokeStyle(lineWidth: 1, dash: [1.5, 2.5]))
         }
@@ -101,51 +109,48 @@ public struct CubeView: View {
             for (offset, index) in range.enumerated() {
                 let p = position(of: index)
                 var cross = Path()
-                cross.move(to: screenPoint(-1, p.y, p.z)); cross.addLine(to: screenPoint(1, p.y, p.z))
-                cross.move(to: screenPoint(p.x, -1, p.z)); cross.addLine(to: screenPoint(p.x, 1, p.z))
-                cross.move(to: screenPoint(p.x, p.y, -1)); cross.addLine(to: screenPoint(p.x, p.y, 1))
+                line([Vec(-1, p.y, p.z), Vec(1, p.y, p.z)], into: &cross)
+                line([Vec(p.x, -1, p.z), Vec(p.x, 1, p.z)], into: &cross)
+                line([Vec(p.x, p.y, -1), Vec(p.x, p.y, 1)], into: &cross)
                 context.stroke(cross, with: .color(Self.color(for: offset).opacity(0.55)),
                                style: StrokeStyle(lineWidth: 0.7, dash: [3, 2]))
             }
         }
 
-        let points = range.map { index -> CGPoint in
-            let p = position(of: index)
-            return screenPoint(p.x, p.y, p.z)
-        }
+        // The signals that are in front of the camera.
+        let projected = range.map { camera.project(position(of: $0), halfSize: halfSize) }
 
         // Lines joining the signals.
         if options.showLines {
-            let centre = projection.screen(x: 0, y: 0, z: 0, in: rect)
             var lines = Path()
             switch mode {
             case .mono:
-                for point in points {
-                    lines.move(to: centre)
-                    lines.addLine(to: point)
-                }
+                for index in range { line([.zero, position(of: index)], into: &lines) }
             case .stereo:
-                for pair in stride(from: 0, to: points.count - 1, by: 2) {
-                    lines.move(to: points[pair])
-                    lines.addLine(to: points[pair + 1])
+                for pair in stride(from: range.lowerBound, to: range.upperBound - 1, by: 2) {
+                    line([position(of: pair), position(of: pair + 1)], into: &lines)
                 }
             case .quadro, .okto:
-                lines.addLines(points)
+                line(range.map(position(of:)), into: &lines)
             }
             context.stroke(lines, with: .color(.primary), lineWidth: 1.2)
         }
 
-        // Points, and their numbers.
-        for (offset, index) in range.enumerated() {
+        // Points, farthest first so that nearer ones cover them, and their numbers.
+        let order = (0..<range.count).sorted { (projected[$0]?.depth ?? 0) > (projected[$1]?.depth ?? 0) }
+        for offset in order {
+            guard let point = projected[offset] else { continue }
+            let index = range.lowerBound + offset
             let signal = signals[index]
-            let radius = options.dotSizeFollowsVolume ? 1.5 + 3 * signal.unitVolume : 3.5
-            let dot = CGRect(x: points[offset].x - radius, y: points[offset].y - radius,
-                             width: radius * 2, height: radius * 2)
+            let base = options.dotSizeFollowsVolume ? 1.5 + 3 * signal.unitVolume : 3.5
+            let radius = base * (options.depthCues ? min(max(point.scale, 0.4), 2.5) : 1)
+            let centre = screen(point)
+            let dot = CGRect(x: centre.x - radius, y: centre.y - radius, width: radius * 2, height: radius * 2)
             context.fill(Path(ellipseIn: dot), with: .color(Self.color(for: offset)))
             // Idle signals all sit at the centre; their numbers would pile up.
             if options.showSignalNumbers, signal != SignalState() {
                 context.draw(Text("\(index)").font(.system(size: 9, design: .monospaced)),
-                             at: CGPoint(x: points[offset].x + radius + 5, y: points[offset].y - radius - 3))
+                             at: CGPoint(x: centre.x + radius + 5, y: centre.y - radius - 3))
             }
         }
 
@@ -172,17 +177,57 @@ public struct CubeView: View {
     }
 }
 
-/// The grid of cubes, laid out like CMO's window.
+/// A small X, Y, Z indicator that turns with the camera.
+struct AxesView: View {
+    let camera: Camera
+
+    var body: some View {
+        Canvas { context, size in
+            let view = Camera(yaw: camera.yaw, pitch: camera.pitch, roll: camera.roll, fieldOfView: 0, zoom: 1)
+            let rect = CGRect(origin: .zero, size: size)
+            let axes: [(String, SIMD3<Double>, Color)] = [
+                ("X", SIMD3(1, 0, 0), .red), ("Y", SIMD3(0, 1, 0), .green), ("Z", SIMD3(0, 0, 1), .blue),
+            ]
+            let centre = view.screen(view.project(.zero)!, in: rect, inset: 0.2)
+            // Farthest axis first.
+            let tips = axes.map { (axis: $0, point: view.project($0.1, halfSize: 1 / 3.0.squareRoot())!) }
+                .sorted { $0.point.depth > $1.point.depth }
+            for (axis, point) in tips {
+                let tip = view.screen(point, in: rect, inset: 0.2)
+                var path = Path()
+                path.move(to: centre)
+                path.addLine(to: tip)
+                context.stroke(path, with: .color(axis.2), lineWidth: 1.5)
+                context.draw(Text(axis.0).font(.system(size: 9, weight: .bold, design: .monospaced)).foregroundColor(axis.2),
+                             at: CGPoint(x: tip.x + (tip.x - centre.x) * 0.3, y: tip.y + (tip.y - centre.y) * 0.3))
+            }
+        }
+        .frame(width: 44, height: 44)
+        .allowsHitTesting(false)
+    }
+}
+
+/// The grid of cubes, laid out like CMO's window. Dragging turns all cubes
+/// together, pinching zooms, rotating twists the view about the line of sight,
+/// and a double click goes back to the default view.
 public struct CubeGridView: View {
     let mode: GraphicsMode
     let signals: [SignalState]
     let options: DisplayOptions
+    let onCameraChange: ((Camera) -> Void)?
 
-    public init(mode: GraphicsMode, signals: [SignalState], options: DisplayOptions = DisplayOptions()) {
+    @State private var gestureStart: Camera?
+
+    public init(mode: GraphicsMode, signals: [SignalState], options: DisplayOptions = DisplayOptions(),
+                onCameraChange: ((Camera) -> Void)? = nil) {
         self.mode = mode
         self.signals = signals
         self.options = options
+        self.onCameraChange = onCameraChange
     }
+
+    /// Degrees of rotation per point of dragging.
+    private static let degreesPerPoint = 0.5
 
     public var body: some View {
         VStack(spacing: 3) {
@@ -194,5 +239,40 @@ public struct CubeGridView: View {
                 }
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            if options.showAxes { AxesView(camera: options.camera).padding(6) }
+        }
+        .contentShape(Rectangle())
+        .gesture(onCameraChange.map(interaction))
+    }
+
+    private func interaction(_ change: @escaping (Camera) -> Void) -> some Gesture {
+        let drag = DragGesture(minimumDistance: 2)
+            .onChanged { value in
+                var camera = gestureStart ?? options.camera
+                gestureStart = camera
+                camera.orbit(dx: value.translation.width * Self.degreesPerPoint,
+                             dy: value.translation.height * Self.degreesPerPoint)
+                change(camera)
+            }
+            .onEnded { _ in gestureStart = nil }
+        let magnify = MagnifyGesture()
+            .onChanged { value in
+                var camera = gestureStart ?? options.camera
+                gestureStart = camera
+                camera.scaleZoom(by: value.magnification)
+                change(camera)
+            }
+            .onEnded { _ in gestureStart = nil }
+        let rotate = RotateGesture()
+            .onChanged { value in
+                var camera = gestureStart ?? options.camera
+                gestureStart = camera
+                camera.rotateAboutViewAxis(by: -value.rotation.degrees)
+                change(camera)
+            }
+            .onEnded { _ in gestureStart = nil }
+        let reset = TapGesture(count: 2).onEnded { change(Camera()) }
+        return reset.exclusively(before: drag.simultaneously(with: magnify).simultaneously(with: rotate))
     }
 }
