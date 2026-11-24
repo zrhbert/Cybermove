@@ -24,15 +24,6 @@ public enum CoreMIDIDevices {
         }
     }
 
-    /// All MIDI destinations currently known to the system.
-    public static func destinations() -> [CoreMIDIEndpoint] {
-        (0..<MIDIGetNumberOfDestinations()).compactMap { index in
-            let endpoint = MIDIGetDestination(index)
-            guard endpoint != 0, let id = uniqueID(of: endpoint) else { return nil }
-            return CoreMIDIEndpoint(id: id, name: displayName(of: endpoint))
-        }
-    }
-
     static func uniqueID(of object: MIDIObjectRef) -> Int32? {
         var id: Int32 = 0
         guard MIDIObjectGetIntegerProperty(object, kMIDIPropertyUniqueID, &id) == noErr else { return nil }
@@ -156,16 +147,12 @@ public final class CoreMIDIVirtualSource: @unchecked Sendable {
     public let name: String
     public let uniqueID: Int32
 
-    /// `fixedUniqueID` makes the source keep its identity across restarts, so
-    /// that apps which remember it by ID find it again. If another endpoint
-    /// already has that ID, the system assigns one.
-    public init(name: String, clientName: String = "Cybermove virtual", fixedUniqueID: Int32? = nil) throws {
+    public init(name: String) throws {
         self.name = name
-        var status = MIDIClientCreateWithBlock(clientName as CFString, &client) { _ in }
+        var status = MIDIClientCreateWithBlock("Cybermove virtual" as CFString, &client) { _ in }
         guard status == noErr else { throw CreationError(status: status) }
         status = MIDISourceCreateWithProtocol(client, name as CFString, ._1_0, &source)
         guard status == noErr else { throw CreationError(status: status) }
-        if let fixedUniqueID { _ = MIDIObjectSetIntegerProperty(source, kMIDIPropertyUniqueID, fixedUniqueID) }
         uniqueID = CoreMIDIDevices.uniqueID(of: source) ?? 0
     }
 
@@ -210,93 +197,5 @@ public final class CoreMIDIVirtualSource: @unchecked Sendable {
             }
         }
         if packetsInList > 0 { MIDIReceivedEventList(source, list) }
-    }
-}
-
-/// A virtual MIDI destination: other applications see it as a MIDI output they
-/// can send to, and `handler` receives what they send, as MIDI 1.0 bytes.
-/// `handler` runs on a CoreMIDI thread.
-public final class CoreMIDIVirtualDestination: @unchecked Sendable {
-    private var client = MIDIClientRef()
-    private var destination = MIDIEndpointRef()
-    public let name: String
-    public let uniqueID: Int32
-
-    public init(name: String, clientName: String = "Cybermove virtual", fixedUniqueID: Int32? = nil,
-                handler: @escaping @Sendable ([UInt8]) -> Void) throws {
-        self.name = name
-        var status = MIDIClientCreateWithBlock(clientName as CFString, &client) { _ in }
-        guard status == noErr else { throw CoreMIDIVirtualSource.CreationError(status: status) }
-        status = MIDIDestinationCreateWithProtocol(client, name as CFString, ._1_0, &destination) { eventList, _ in
-            var words: [UInt32] = []
-            for packet in eventList.unsafeSequence() {
-                let count = Int(packet.pointee.wordCount)
-                withUnsafeBytes(of: packet.pointee.words) { raw in
-                    words.append(contentsOf: raw.bindMemory(to: UInt32.self).prefix(count))
-                }
-            }
-            let bytes = UMP.bytes(fromWords: words)
-            if !bytes.isEmpty { handler(bytes) }
-        }
-        guard status == noErr else { throw CoreMIDIVirtualSource.CreationError(status: status) }
-        if let fixedUniqueID { _ = MIDIObjectSetIntegerProperty(destination, kMIDIPropertyUniqueID, fixedUniqueID) }
-        uniqueID = CoreMIDIDevices.uniqueID(of: destination) ?? 0
-    }
-
-    deinit {
-        if destination != 0 { MIDIEndpointDispose(destination) }
-        if client != 0 { MIDIClientDispose(client) }
-    }
-}
-
-/// Sends MIDI to a CoreMIDI destination, for example to an Atari behind a MIDI
-/// interface, or to the HatariMidiBridge.
-public final class CoreMIDISender: @unchecked Sendable {
-    private var client = MIDIClientRef()
-    private var port = MIDIPortRef()
-
-    public init() throws {
-        var status = MIDIClientCreateWithBlock("Cybermove sender" as CFString, &client) { _ in }
-        guard status == noErr else { throw CoreMIDIVirtualSource.CreationError(status: status) }
-        status = MIDIOutputPortCreate(client, "Cybermove Output" as CFString, &port)
-        guard status == noErr else { throw CoreMIDIVirtualSource.CreationError(status: status) }
-    }
-
-    deinit {
-        if port != 0 { MIDIPortDispose(port) }
-        if client != 0 { MIDIClientDispose(client) }
-    }
-
-    /// Sends MIDI 1.0 bytes to the destination with the given unique ID.
-    /// Returns false if there is no such destination or sending failed.
-    @discardableResult
-    public func send(bytes: [UInt8], toDestinationID id: Int32) -> Bool {
-        var object = MIDIObjectRef()
-        var type = MIDIObjectType.other
-        guard MIDIObjectFindByUniqueID(id, &object, &type) == noErr, type == .destination || type == .externalDestination
-        else { return false }
-
-        var parser = MidiParser()
-        let words = parser.feed(bytes).flatMap { UMP.words(for: $0) }
-        guard !words.isEmpty else { return true }
-        var ok = true
-        var index = 0
-        let capacity = 4096
-        let raw = UnsafeMutableRawPointer.allocate(byteCount: capacity, alignment: MemoryLayout<UInt32>.alignment)
-        defer { raw.deallocate() }
-        let list = raw.assumingMemoryBound(to: MIDIEventList.self)
-        while index < words.count {
-            var packet = MIDIEventListInit(list, ._1_0)
-            var packets = 0
-            while index < words.count, packets < 64 {
-                let size = UMP.wordCount(messageType: words[index] >> 28)
-                let end = min(index + size, words.count)
-                packet = MIDIEventListAdd(list, capacity, packet, 0, end - index, Array(words[index..<end]))
-                index = end
-                packets += 1
-            }
-            if MIDISendEventList(port, object, list) != noErr { ok = false }
-        }
-        return ok
     }
 }

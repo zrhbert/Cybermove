@@ -121,44 +121,13 @@ input as well as an output, otherwise Hatari disables MIDI completely.
 
 ### Through the HatariMidiBridge (any MIDI app, both directions)
 
-`HatariMidiBridge` connects Hatari's MIDI files to CoreMIDI in both directions,
-so that Cybermove and any other Mac MIDI app (a sequencer, a monitor) can use
-the Atari at the same time, whether or not Cybermove runs:
-
-```
-Hatari --midi-out  ->  HatariMidiBridge  ->  CoreMIDI source      "Hatari MIDI Out"
-Hatari --midi-in   <-  HatariMidiBridge  <-  CoreMIDI destination "Hatari MIDI In"
-```
-
-```sh
-swift run HatariMidiBridge                       # prints the Hatari options to use
-hatari ... --midi-out /tmp/hatari-midi-out.fifo --midi-in /tmp/hatari-midi-in.fifo realtim5.prg
-```
-
-- **Start the bridge first** and leave it running. It keeps its end of both
-  FIFOs open, so Hatari never blocks on opening them and can be started and
-  stopped freely. If the bridge exits while Hatari runs, Hatari's MIDI output
-  has no reader any more.
-- In Cybermove, choose **Hatari MIDI Out** in the Source menu (or "All MIDI
-  inputs"). In a sequencer, send to **Hatari MIDI In** to reach the Atari, for
-  example MIDI Start and Stop. The two endpoints keep fixed CoreMIDI IDs, so
-  apps that remember them find them again after a restart.
-- Messages are parsed and re-framed, so running status from the Atari is
-  expanded and system exclusive messages stay whole, in both directions.
-- While Hatari is not running, what is sent to it is discarded (and logged
-  once), so that nothing stale hits the Atari when Hatari starts. A Hatari that
-  runs but does not take its input has a full FIFO, and the overflow is dropped
-  and counted.
-- Options: `--out-fifo`, `--in-fifo`, `--source-name`, `--destination-name`,
-  `--drop-clock` and `--drop-sensing` (leave out MIDI clock or active sensing,
-  both ways), `--events` (print every message), `--quiet`. `kill -USR1 <pid>`
-  prints the counters.
-- `scripts/install-bridge.sh` builds a universal binary, installs it for the
-  current user and runs it as a LaunchAgent that starts at login (log in
-  `~/Library/Logs/HatariMidiBridge.log`); `--uninstall` removes it, `--dry-run`
-  shows what it would do.
-- `cybermove-midi-send "Hatari MIDI In" FA 90 3C 64 FC` sends bytes to any
-  CoreMIDI destination for trying it out (`--list` lists them).
+[HatariMidiBridge](https://github.com/zrhbert/HatariMidiBridge) is a separate
+program that connects Hatari's MIDI files to CoreMIDI in both directions. It
+publishes the Atari's output as the CoreMIDI source **Hatari MIDI Out** and takes
+what apps send to the destination **Hatari MIDI In** to the Atari. Cybermove and
+any other Mac MIDI app (a sequencer, a monitor) can then use Hatari at the same
+time, whether or not Cybermove runs. In Cybermove, choose **Hatari MIDI Out** in
+the Source menu (or "All MIDI inputs"). See the bridge's README for how to start it.
 
 ### Direct FIFO (Cybermove only, no bridge)
 
@@ -186,11 +155,7 @@ Decode a recording instead with `swift run cybermove-decode capture.bin`. Pass
 | `Sources/cybermove-decode` | command-line decoder for captures and live FIFOs |
 | `Sources/cybermove-snapshot` | renders the window to a PNG from a capture, for checking the display (`--yaw --pitch --roll --fov --zoom`) |
 | `Sources/cybermove-midi-replay` | plays a capture through a virtual CoreMIDI source |
-| `Sources/cybermove-midi-send` | sends MIDI bytes to a CoreMIDI destination |
-| `Sources/HatariMidiBridgeKit` | the bridge between Hatari's MIDI FIFOs and CoreMIDI |
-| `Sources/HatariMidiBridge` | the bridge as a command-line program / LaunchAgent |
 | `Tests/CybermoveCoreTests` | parser and decoder tests, plus the real capture |
-| `Tests/HatariMidiBridgeKitTests` | the bridge, with real FIFOs and CoreMIDI |
 
 `swift test` runs everything.
 
@@ -215,5 +180,5 @@ the app uses no CPU.
 3. CoreMIDI source for a physical connection (done; verified with a virtual source, not yet with a real interface).
 4. A proper app bundle with an icon (done, `scripts/make-app.sh`); signing for distribution is not.
 5. Display options from Realtimer's setup: a full-rotation perspective camera, crosshairs, volume bars (done); per-signal line switches are not.
-6. HatariMidiBridge: Hatari's MIDI files to and from CoreMIDI, so other Mac MIDI apps can talk to the Atari (done; verified with Hatari running Realtimer).
+6. HatariMidiBridge, now its own project: Hatari's MIDI files to and from CoreMIDI, so other Mac MIDI apps can talk to the Atari (done).
 7. Later: Cybermove itself sending to the Atari (transport, MMC, MTC position) through the bridge's destination.
