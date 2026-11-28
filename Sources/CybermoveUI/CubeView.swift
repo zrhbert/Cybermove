@@ -10,12 +10,15 @@ public struct CubeView: View {
     let mode: GraphicsMode
     let signals: [SignalState]          // all 32 signals of the system
     let options: DisplayOptions
+    let firstNumber: Int
 
-    public init(cube: Int, mode: GraphicsMode, signals: [SignalState], options: DisplayOptions = DisplayOptions()) {
+    public init(cube: Int, mode: GraphicsMode, signals: [SignalState], options: DisplayOptions = DisplayOptions(),
+                firstNumber: Int = 0) {
         self.cube = cube
         self.mode = mode
         self.signals = signals
         self.options = options
+        self.firstNumber = firstNumber
     }
 
     private typealias Vec = SIMD3<Double>
@@ -149,7 +152,7 @@ public struct CubeView: View {
             context.fill(Path(ellipseIn: dot), with: .color(Self.color(for: offset)))
             // Idle signals all sit at the centre; their numbers would pile up.
             if options.showSignalNumbers, signal != SignalState() {
-                context.draw(Text("\(index)").font(.system(size: 9, design: .monospaced)),
+                context.draw(Text("\(firstNumber + index)").font(.system(size: 9, design: .monospaced)),
                              at: CGPoint(x: centre.x + radius + 5, y: centre.y - radius - 3))
             }
         }
@@ -169,7 +172,9 @@ public struct CubeView: View {
 
     private var label: String {
         let range = mode.signals(inCube: cube)
-        return range.count == 1 ? "\(range.lowerBound)" : "\(range.lowerBound)-\(range.upperBound - 1)"
+        let first = firstNumber + range.lowerBound
+        let last = firstNumber + range.upperBound - 1
+        return range.count == 1 ? "\(first)" : "\(first)-\(last)"
     }
 
     private static func color(for offset: Int) -> Color {
@@ -215,13 +220,15 @@ public struct CubeGridView: View {
     let signals: [SignalState]
     let options: DisplayOptions
     let onCameraChange: ((Camera) -> Void)?
+    let firstNumber: Int
 
     public init(mode: GraphicsMode, signals: [SignalState], options: DisplayOptions = DisplayOptions(),
-                onCameraChange: ((Camera) -> Void)? = nil) {
+                onCameraChange: ((Camera) -> Void)? = nil, firstNumber: Int = 0) {
         self.mode = mode
         self.signals = signals
         self.options = options
         self.onCameraChange = onCameraChange
+        self.firstNumber = firstNumber
     }
 
     public var body: some View {
@@ -229,7 +236,8 @@ public struct CubeGridView: View {
             ForEach(0..<mode.rows, id: \.self) { row in
                 HStack(spacing: 3) {
                     ForEach(0..<mode.columns, id: \.self) { column in
-                        CubeView(cube: row * mode.columns + column, mode: mode, signals: signals, options: options)
+                        CubeView(cube: row * mode.columns + column, mode: mode, signals: signals, options: options,
+                                 firstNumber: firstNumber)
                     }
                 }
             }

@@ -5,9 +5,11 @@ import SwiftUI
 /// coordinate window. Rows without any data are dimmed.
 public struct SignalTableView: View {
     let signals: [SignalState]
+    let firstNumber: Int
 
-    public init(signals: [SignalState]) {
+    public init(signals: [SignalState], firstNumber: Int = 0) {
         self.signals = signals
+        self.firstNumber = firstNumber
     }
 
     public var body: some View {
@@ -25,10 +27,10 @@ public struct SignalTableView: View {
             ForEach(signals.indices, id: \.self) { index in
                 let signal = signals[index]
                 GridRow {
-                    Text("\(index)").gridColumnAlignment(.leading)
-                    Text("\(signal.x)")
-                    Text("\(signal.y)")
-                    Text("\(signal.z)")
+                    Text("\(firstNumber + index)").gridColumnAlignment(.leading)
+                    Text(Self.signed(signal.x))
+                    Text(Self.signed(signal.y))
+                    Text(Self.signed(signal.z))
                     Text("\(signal.volume)")
                     VolumeBar(value: signal.unitVolume)
                 }
@@ -37,6 +39,11 @@ public struct SignalTableView: View {
         }
         .font(.system(.caption, design: .monospaced))
         .monospacedDigit()
+    }
+
+    /// Always a sign and three digits, so the values line up: +063, -064.
+    private static func signed(_ value: Int8) -> String {
+        String(format: "%+04d", Int(value))
     }
 }
 

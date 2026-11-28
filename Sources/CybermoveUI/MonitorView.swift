@@ -23,13 +23,16 @@ public struct MonitorContent: View {
         let signals = snapshot.systems.indices.contains(system)
             ? snapshot.systems[system]
             : Array(repeating: SignalState(), count: CybermoveDecoder.signalsPerSystem)
+        // Realtimer counts the signals of channel 15 as 32 to 63; system 0 is channel 15.
+        let firstNumber = system == 0 ? CybermoveDecoder.signalsPerSystem : 0
         HStack(alignment: .top, spacing: 12) {
             // Not in a ScrollView: 32 rows fit at this font size, and the window
             // has a minimum height. (ImageRenderer cannot draw scroll views.)
-            SignalTableView(signals: signals)
+            SignalTableView(signals: signals, firstNumber: firstNumber)
                 .padding(8)
                 .frame(width: 250, alignment: .top)
-            CubeGridView(mode: mode, signals: signals, options: options, onCameraChange: onCameraChange)
+            CubeGridView(mode: mode, signals: signals, options: options, onCameraChange: onCameraChange,
+                         firstNumber: firstNumber)
         }
         .padding(8)
     }

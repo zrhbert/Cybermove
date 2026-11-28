@@ -29,6 +29,7 @@ done
 
 identifier="io.github.zrhbert.Cybermove"
 version="0.2.0"
+built="$(date '+%Y-%m-%d %H:%M %Z')"
 app="build/Cybermove.app"
 
 # shellcheck disable=SC2086   # $architectures is deliberately word-split
@@ -55,6 +56,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$version</string>
     <key>CFBundleVersion</key><string>$version</string>
+    <key>CybermoveBuildDate</key><string>$built</string>
     <key>LSApplicationCategoryType</key><string>public.app-category.music</string>
     <key>LSMinimumSystemVersion</key><string>15.0</string>
     <key>NSHighResolutionCapable</key><true/>
