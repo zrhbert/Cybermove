@@ -35,8 +35,19 @@ public final class MonitorEngine: Sendable {
         var lastByteTime: Date?
     }
 
+    /// Holds the handler in a class. Reading a closure back out of a generic
+    /// `Mutex` wraps it in another reabstraction thunk, so every change added
+    /// a level to the call stack until it overflowed.
+    private final class ChangeHandler: Sendable {
+        let call: @Sendable () -> Void
+
+        init(_ call: @escaping @Sendable () -> Void) {
+            self.call = call
+        }
+    }
+
     private let state: Mutex<State>
-    private let changeHandler = Mutex<(@Sendable () -> Void)?>(nil)
+    private let changeHandler = Mutex<ChangeHandler?>(nil)
 
     public init(config: CybermoveConfig = CybermoveConfig()) {
         state = Mutex(State(decoder: CybermoveDecoder(config: config)))
@@ -46,11 +57,11 @@ public final class MonitorEngine: Sendable {
     /// arrived, or the engine was reset or reconfigured. The handler should be
     /// quick and must not call back into the engine under a lock.
     public func setChangeHandler(_ handler: (@Sendable () -> Void)?) {
-        changeHandler.withLock { $0 = handler }
+        changeHandler.withLock { $0 = handler.map(ChangeHandler.init) }
     }
 
     private func notifyChange() {
-        changeHandler.withLock { $0 }?()
+        changeHandler.withLock { $0 }?.call()
     }
 
     /// Process a chunk of raw bytes.
